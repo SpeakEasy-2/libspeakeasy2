@@ -1,6 +1,2 @@
-lib/
-*.mexa64
 build/
 dist/
-__pycache__/
-*.so
