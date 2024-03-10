@@ -1,0 +1,2 @@
+add_executable(zachary_example zachary.c)
+target_link_libraries(zachary_example SpeakEasy2)
