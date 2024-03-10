@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build MATLAB toolbox in actions.
 - Add python package.
 - Build python with actions.
+- Add R package.
 
 ### Changed
 

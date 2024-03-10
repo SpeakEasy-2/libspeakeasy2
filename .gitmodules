@@ -1,9 +1,3 @@
-[submodule "matlab-igraph"]
-	path = vendor/matlab-igraph
-	url = https://github.com/DavidRConnell/matlab-igraph
 [submodule "vendor/igraph"]
 	path = vendor/igraph
 	url = https://github.com/igraph/igraph
-[submodule "vendor/python-igraph"]
-	path = vendor/python-igraph
-	url = https://github.com/igraph/python-igraph

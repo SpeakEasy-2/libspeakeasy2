@@ -77,6 +77,8 @@ add_subdirectory(matlab/mex)
 find_package(Python3 COMPONENTS Interpreter Development)
 add_subdirectory(python)
 
+add_subdirectory(R)
+
 # Installation
 ## MATLAB Toolbox
 install(DIRECTORY matlab/toolbox

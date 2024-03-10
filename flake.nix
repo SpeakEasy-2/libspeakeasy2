@@ -26,6 +26,10 @@
         editablePackageSources = { speakeasy2 = ./python; };
         preferWheels = true;
       };
+
+      REnv = pkgs.rWrapper.override {
+        packages = with pkgs.rPackages; [ styler lintr devtools igraph ];
+      };
     in {
       devShells.${system}.default =
         (pkgs.mkShell.override { stdenv = pkgs.gcc10Stdenv; }) {
@@ -33,7 +37,7 @@
             matlab
             matlab-mlint
             matlab-mex
-          ]) ++ [ pythonEnv ] ++ (with pkgs; [
+          ]) ++ [ pythonEnv REnv ] ++ (with pkgs; [
             astyle
             cmake
             ninja
