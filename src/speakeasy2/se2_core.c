@@ -208,6 +208,16 @@ int speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
   se2_set_defaults(graph, opts);
 
   if (opts->verbose) {
+    igraph_bool_t isweighted = false;
+    if (weights) {
+      for (igraph_integer_t i = 0; i < igraph_ecount(graph); i++) {
+        if (VECTOR(*weights)[i] != 1) {
+          isweighted = true;
+          break;
+        }
+      }
+    }
+
     igraph_integer_t possible_edges = igraph_vcount(graph);
     possible_edges *= possible_edges;
     igraph_real_t edge_density = (igraph_real_t)igraph_ecount(graph) /
@@ -218,24 +228,12 @@ int speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
            "input type treated as %s\n"
            "ADJ is %s\n"
            "calling main routine at level 1\n",
-           edge_density, weights ? "weighted" : "unweighted",
+           edge_density, isweighted ? "weighted" : "unweighted",
            directed ? "asymmetric" : "symmetric");
   }
 
-  igraph_bool_t isweighted = weights ? true : false;
-  igraph_vector_t weights_i;
-  if (isweighted) {
-    weights_i = *weights;
-  } else {
-    igraph_vector_init(&weights_i, igraph_ecount(graph));
-    for (igraph_integer_t i = 0; i < igraph_ecount(graph); i++) {
-      VECTOR(weights_i)[i] = 1;
-    }
-  }
-
-  se2_reweight(graph, &weights_i);
-
-  se2_bootstrap(graph, &weights_i, 0, opts, res);
+  se2_reweight(graph, weights);
+  se2_bootstrap(graph, weights, 0, opts, res);
 
   /* if (opts->node_confidence) { */
   /*   // pass; */
@@ -244,10 +242,6 @@ int speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
   /* for (igraph_integer_t i = 1; i < opts->subcluster; i++) { */
   // pass;
   /* } */
-
-  if (!isweighted) {
-    igraph_vector_destroy(&weights_i);
-  }
 
   return IGRAPH_SUCCESS;
 }
