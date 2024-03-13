@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add node ordering function.
+
 ### Changed
 
 - Split project into core library (here) and high level packages (elsewhere).

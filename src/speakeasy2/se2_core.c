@@ -98,7 +98,7 @@ static void se2_bootstrap(igraph_t* graph,
                           igraph_vector_t const* weights,
                           igraph_integer_t const subcluster_iter,
                           se2_options const* opts,
-                          igraph_vector_int_t* res)
+                          igraph_vector_int_t* memb)
 {
   igraph_integer_t n_nodes = igraph_vcount(graph);
   igraph_vector_t kin;
@@ -147,7 +147,7 @@ static void se2_bootstrap(igraph_t* graph,
 
   se2_most_representative_partition(&partition_store,
                                     n_partitions,
-                                    res, opts);
+                                    memb, opts);
 
   if ((opts->verbose) && (!subcluster_iter)) {
     printf("generated %"IGRAPH_PRId" partitions at level 1\n", n_partitions);
@@ -202,8 +202,8 @@ static void se2_set_defaults(igraph_t const* graph, se2_options* opts)
   omp_set_num_threads(opts->max_threads);
 }
 
-int speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
-                 se2_options* opts, igraph_vector_int_t* res)
+igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
+                            se2_options* opts, igraph_vector_int_t* memb)
 {
   se2_set_defaults(graph, opts);
 
@@ -233,7 +233,7 @@ int speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
   }
 
   se2_reweight(graph, weights);
-  se2_bootstrap(graph, weights, 0, opts, res);
+  se2_bootstrap(graph, weights, 0, opts, memb);
 
   /* if (opts->node_confidence) { */
   /*   // pass; */
@@ -242,6 +242,49 @@ int speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
   /* for (igraph_integer_t i = 1; i < opts->subcluster; i++) { */
   // pass;
   /* } */
+
+  return IGRAPH_SUCCESS;
+}
+
+/* Return node indices of each cluster in order from largest-to-smallest
+   community. This can be used to display community structure in heat maps. */
+igraph_error_t se2_order_nodes(igraph_vector_int_t const* memb,
+                               igraph_vector_int_t* ordering)
+{
+  igraph_integer_t const n_nodes = igraph_vector_int_size(memb);
+  igraph_integer_t const comm_min = igraph_vector_int_min(memb);
+  igraph_integer_t const comm_max = igraph_vector_int_max(memb);
+  igraph_integer_t const n_communities = comm_max - comm_min + 1;
+
+  igraph_vector_int_t community_sizes;
+  igraph_vector_int_t indices;
+  igraph_vector_int_t pos;
+
+  igraph_vector_int_init(&community_sizes, n_communities);
+  igraph_vector_int_init(&indices, n_communities);
+  igraph_vector_int_init(&pos, n_communities);
+
+  igraph_vector_int_init(ordering, n_nodes);
+
+  for (igraph_integer_t i = 0; i < n_nodes; i++) {
+    VECTOR(community_sizes)[VECTOR(*memb)[i] - comm_min]++;
+  }
+  igraph_vector_int_qsort_ind(&community_sizes, &indices, IGRAPH_DESCENDING);
+
+  for (igraph_integer_t i = 1; i < n_communities; i++) {
+    VECTOR(pos)[VECTOR(indices)[i]] = VECTOR(pos)[VECTOR(indices)[i - 1]] +
+                                      VECTOR(community_sizes)[VECTOR(indices)[i - 1]];
+  }
+
+  for (igraph_integer_t i = 0; i < n_nodes; i++) {
+    igraph_integer_t comm = VECTOR(*memb)[i] - comm_min;
+    VECTOR(*ordering)[VECTOR(pos)[comm]] = i;
+    VECTOR(pos)[comm]++;
+  }
+
+  igraph_vector_int_destroy(&pos);
+  igraph_vector_int_destroy(&indices);
+  igraph_vector_int_destroy(&community_sizes);
 
   return IGRAPH_SUCCESS;
 }
