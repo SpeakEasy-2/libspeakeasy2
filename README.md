@@ -9,24 +9,24 @@ This C library is used to provide packages for high-level languages: [MATLAB too
 At the moment, implementation performs a subset of the matlab version. Specifically, this cannot perform subclustering, provide confidence for node membership, or order the nodes for plotting.
 
 ## Building from source
-This package uses CMake and git submodules for handling some of the dependencies. External dependencies are `bison`, `flex`, and `libxml2`.
+This package is built using CMake and uses git submodules to handling some of the dependencies. External dependencies needed for building the igraph library are `bison`, `flex`, and `libxml2`.
 
-To set download the git submodules use:
+To download the source, including the git submodules use:
 
 ```bash
 git submodule init && git submodule update --recursive
 ```
 
-For CMake run:
+To build run:
 ```bash
 cmake -B build .
 cmake --build build
 ```
-This will build the igraph library and the speakeasy2 library (as a CMake object library).
+This will build the igraph library (as a static library) and the speakeasy2 library (as a CMake object library).
 
 ## Use
 
-The below example can be found in [examples/zachary.c](file:///./examples/zachary.c) and is built by the above `cmake` command. See the related `CMakeLists.txt` for using this library in other C projects.
+The below example can be found in [examples/zachary.c](file:///./examples/zachary.c) and is built by the above `cmake` command. The executable will be under `./build/examples/zachary_example` once the project has been built. See the related `CMakeLists.txt` under the `examples` directory for a starting point for using this library in other C projects.
 
 ```C
 #include "igraph.h"
