@@ -2,8 +2,8 @@
 
 #define ABS(a) (a) > 0 ? (a) : -(a);
 
-static igraph_real_t skewness(igraph_t const *graph,
-                              igraph_vector_t const *weights)
+static igraph_real_t skewness(igraph_t const* graph,
+                              igraph_vector_t const* weights)
 {
   if (!weights) {
     return 0;
@@ -32,9 +32,9 @@ static igraph_real_t skewness(igraph_t const *graph,
   return skew;
 }
 
-static void se2_mean_link_weight(igraph_t const *graph,
-                                 igraph_vector_t const *weights,
-                                 igraph_vector_t *diagonal_weights)
+static void se2_mean_link_weight(igraph_t const* graph,
+                                 igraph_vector_t const* weights,
+                                 igraph_vector_t* diagonal_weights)
 {
   igraph_eit_t eit;
   igraph_integer_t eid;
@@ -62,7 +62,7 @@ static void se2_mean_link_weight(igraph_t const *graph,
   igraph_eit_destroy(&eit);
 }
 
-static void se2_new_diagonal(igraph_t *graph, igraph_vector_t *weights,
+static void se2_new_diagonal(igraph_t* graph, igraph_vector_t* weights,
                              igraph_bool_t is_skewed)
 {
   igraph_integer_t n_diagonal_edges = igraph_vcount(graph);
@@ -99,7 +99,7 @@ static void se2_new_diagonal(igraph_t *graph, igraph_vector_t *weights,
   igraph_vector_destroy(&diagonal_weights);
 }
 
-static void se2_remove_diagonal(igraph_t *graph, igraph_vector_t *weights)
+static void se2_remove_diagonal(igraph_t* graph, igraph_vector_t* weights)
 {
   igraph_eit_t eit;
   igraph_integer_t n_nodes = igraph_vcount(graph);
@@ -142,7 +142,7 @@ static void se2_remove_diagonal(igraph_t *graph, igraph_vector_t *weights)
   igraph_eit_destroy(&eit);
 }
 
-static void se2_reweight_i(igraph_t *graph, igraph_vector_t *weights)
+static void se2_reweight_i(igraph_t* graph, igraph_vector_t* weights)
 {
   if (!weights) {
     return;
@@ -162,7 +162,7 @@ static void se2_reweight_i(igraph_t *graph, igraph_vector_t *weights)
   }
 }
 
-static void se2_add_offset(igraph_t const *graph, igraph_vector_t *weights)
+static void se2_add_offset(igraph_t const* graph, igraph_vector_t* weights)
 {
   igraph_integer_t n_nodes = igraph_vcount(graph);
   igraph_integer_t n_edges = igraph_ecount(graph);
@@ -181,7 +181,7 @@ static void se2_add_offset(igraph_t const *graph, igraph_vector_t *weights)
   }
 }
 
-void se2_reweight(igraph_t *graph, igraph_vector_t *weights)
+void se2_reweight(igraph_t* graph, igraph_vector_t* weights)
 {
   igraph_bool_t is_skewed = skewness(graph, weights) >= 2;
 

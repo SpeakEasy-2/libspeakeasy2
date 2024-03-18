@@ -12,16 +12,20 @@
 #define SE2_SET_OPTION(opts, field, default) \
     (opts->field) = (opts)->field ? (opts)->field : (default)
 
-static void se2_core(igraph_t const* graph,
-                     igraph_vector_t const* weights,
-                     igraph_vector_int_list_t* partition_list,
-                     igraph_integer_t const partition_offset,
-                     se2_options const* opts)
+static igraph_error_t se2_core(igraph_t const* graph,
+                               igraph_vector_t const* weights,
+                               igraph_vector_int_list_t* partition_list,
+                               igraph_integer_t const partition_offset,
+                               se2_options const* opts)
 {
+  igraph_error_t errorcode = IGRAPH_SUCCESS;
   se2_tracker* tracker = se2_tracker_init(opts);
   igraph_vector_int_t* ic_store =
     igraph_vector_int_list_get_ptr(partition_list, partition_offset);
   se2_partition* working_partition = se2_partition_init(graph, ic_store);
+  if (!working_partition) {
+    IGRAPH_ERROR("Failed to generate partition.", IGRAPH_EINVAL);
+  }
 
   igraph_integer_t partition_idx = partition_offset;
   for (igraph_integer_t time = 0; !se2_do_terminate(tracker); time++) {
@@ -34,7 +38,8 @@ static void se2_core(igraph_t const* graph,
 
   se2_tracker_destroy(tracker);
   se2_partition_destroy(working_partition);
-  return;
+
+  return errorcode;
 }
 
 static void se2_most_representative_partition(igraph_vector_int_list_t const

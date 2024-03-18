@@ -7,15 +7,15 @@
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 
 struct se2_iterator {
-  igraph_vector_int_t *ids;
+  igraph_vector_int_t* ids;
   igraph_integer_t pos;
   igraph_integer_t n_total;
   igraph_integer_t n_iter;
   igraph_bool_t owns_ids;
 };
 
-static igraph_integer_t se2_count_labels(igraph_vector_int_t *membership,
-    igraph_vector_int_t *community_sizes)
+static igraph_integer_t se2_count_labels(igraph_vector_int_t* membership,
+    igraph_vector_int_t* community_sizes)
 {
   igraph_integer_t max_label = igraph_vector_int_max(membership);
   igraph_integer_t n_labels = 0;
@@ -34,20 +34,20 @@ static igraph_integer_t se2_count_labels(igraph_vector_int_t *membership,
   return n_labels;
 }
 
-se2_partition *se2_partition_init(igraph_t const *graph,
-                                  igraph_vector_int_t *initial_labels)
+se2_partition* se2_partition_init(igraph_t const* graph,
+                                  igraph_vector_int_t* initial_labels)
 {
-  se2_partition *partition = malloc(sizeof(*partition));
+  se2_partition* partition = malloc(sizeof(*partition));
   igraph_integer_t n_nodes = igraph_vcount(graph);
-  igraph_vector_int_t *reference = malloc(sizeof(*reference));
-  igraph_vector_int_t *stage = malloc(sizeof(*stage));
-  igraph_vector_t *specificity = malloc(sizeof(*specificity));
-  igraph_vector_int_t *community_sizes = malloc(sizeof(*community_sizes));
+  igraph_vector_int_t* reference = malloc(sizeof(*reference));
+  igraph_vector_int_t* stage = malloc(sizeof(*stage));
+  igraph_vector_t* specificity = malloc(sizeof(*specificity));
+  igraph_vector_int_t* community_sizes = malloc(sizeof(*community_sizes));
   igraph_integer_t n_labels = 0;
 
-  // TODO: Make into an igraph error.
   if (igraph_vector_int_size(initial_labels) != n_nodes) {
     printf("Membership vector size differs from number of vertices.");
+    return NULL;
   }
 
   igraph_vector_int_init(reference, n_nodes);
@@ -74,7 +74,7 @@ se2_partition *se2_partition_init(igraph_t const *graph,
   return partition;
 }
 
-void se2_partition_destroy(se2_partition *partition)
+void se2_partition_destroy(se2_partition* partition)
 {
   igraph_vector_int_destroy(partition->reference);
   igraph_vector_int_destroy(partition->stage);
@@ -87,25 +87,25 @@ void se2_partition_destroy(se2_partition *partition)
   free(partition);
 }
 
-void se2_iterator_shuffle(se2_iterator *iterator)
+void se2_iterator_shuffle(se2_iterator* iterator)
 {
   iterator->pos = 0;
   se2_randperm(iterator->ids, iterator->n_total,
                iterator->n_iter);
 }
 
-void se2_iterator_reset(se2_iterator *iterator)
+void se2_iterator_reset(se2_iterator* iterator)
 {
   iterator->pos = 0;
 }
 
 // WARNING: Iterator does not take ownership of the id vector so it must still
 // be cleaned up by the caller.
-se2_iterator *se2_iterator_from_vector(igraph_vector_int_t *ids,
+se2_iterator* se2_iterator_from_vector(igraph_vector_int_t* ids,
                                        igraph_integer_t const n_iter)
 {
   igraph_integer_t n = igraph_vector_int_size(ids);
-  se2_iterator *iterator = malloc(sizeof(*iterator));
+  se2_iterator* iterator = malloc(sizeof(*iterator));
   se2_iterator new_iterator = {
     .ids = ids,
     .n_total = n,
@@ -118,12 +118,12 @@ se2_iterator *se2_iterator_from_vector(igraph_vector_int_t *ids,
   return iterator;
 }
 
-se2_iterator *se2_iterator_random_node_init(se2_partition const *partition,
+se2_iterator* se2_iterator_random_node_init(se2_partition const* partition,
     igraph_real_t const proportion)
 {
   igraph_integer_t n_total = partition->n_nodes;
   igraph_integer_t n_iter = n_total;
-  igraph_vector_int_t *nodes = malloc(sizeof(*nodes));
+  igraph_vector_int_t* nodes = malloc(sizeof(*nodes));
 
   igraph_vector_int_init(nodes, n_total);
   for (igraph_integer_t i = 0; i < n_total; i++) {
@@ -134,19 +134,19 @@ se2_iterator *se2_iterator_random_node_init(se2_partition const *partition,
     n_iter = n_total * proportion;
   }
 
-  se2_iterator *iterator = se2_iterator_from_vector(nodes, n_iter);
+  se2_iterator* iterator = se2_iterator_from_vector(nodes, n_iter);
   iterator->owns_ids = true;
   se2_iterator_shuffle(iterator);
 
   return iterator;
 }
 
-se2_iterator *se2_iterator_random_label_init(se2_partition const *partition,
+se2_iterator* se2_iterator_random_label_init(se2_partition const* partition,
     igraph_real_t const proportion)
 {
   igraph_integer_t n_total = partition->n_labels;
   igraph_integer_t n_iter = n_total;
-  igraph_vector_int_t *labels = malloc(sizeof(*labels));
+  igraph_vector_int_t* labels = malloc(sizeof(*labels));
 
   igraph_vector_int_init(labels, n_total);
   for (igraph_integer_t i = 0, j = 0; i < n_total; j++) {
@@ -160,30 +160,30 @@ se2_iterator *se2_iterator_random_label_init(se2_partition const *partition,
     n_iter = n_total * proportion;
   }
 
-  se2_iterator *iterator = se2_iterator_from_vector(labels, n_iter);
+  se2_iterator* iterator = se2_iterator_from_vector(labels, n_iter);
   iterator->owns_ids = true;
   se2_iterator_shuffle(iterator);
 
   return iterator;
 }
 
-se2_iterator *se2_iterator_k_worst_fit_nodes_init(
-  se2_partition const *partition, igraph_integer_t const k)
+se2_iterator* se2_iterator_k_worst_fit_nodes_init(
+  se2_partition const* partition, igraph_integer_t const k)
 {
-  igraph_vector_int_t *ids = malloc(sizeof(*ids));
+  igraph_vector_int_t* ids = malloc(sizeof(*ids));
   igraph_vector_int_init(ids, partition->n_nodes);
 
   igraph_vector_qsort_ind(partition->label_quality, ids, IGRAPH_ASCENDING);
   igraph_vector_int_resize(ids, k);
 
-  se2_iterator *iterator = se2_iterator_from_vector(ids, k);
+  se2_iterator* iterator = se2_iterator_from_vector(ids, k);
   iterator->owns_ids = true;
   se2_iterator_shuffle(iterator);
 
   return iterator;
 }
 
-void se2_iterator_destroy(se2_iterator *iterator)
+void se2_iterator_destroy(se2_iterator* iterator)
 {
   if (iterator->owns_ids) {
     igraph_vector_int_destroy(iterator->ids);
@@ -192,7 +192,7 @@ void se2_iterator_destroy(se2_iterator *iterator)
   free(iterator);
 }
 
-igraph_integer_t se2_iterator_next(se2_iterator *iterator)
+igraph_integer_t se2_iterator_next(se2_iterator* iterator)
 {
   igraph_integer_t n = 0;
   if (iterator->pos == iterator->n_iter) {
@@ -206,22 +206,22 @@ igraph_integer_t se2_iterator_next(se2_iterator *iterator)
   return n;
 }
 
-igraph_integer_t se2_partition_n_nodes(se2_partition const *partition)
+igraph_integer_t se2_partition_n_nodes(se2_partition const* partition)
 {
   return partition->n_nodes;
 }
 
-igraph_integer_t se2_partition_n_labels(se2_partition const *partition)
+igraph_integer_t se2_partition_n_labels(se2_partition const* partition)
 {
   return partition->n_labels;
 }
 
-igraph_integer_t se2_partition_max_label(se2_partition const *partition)
+igraph_integer_t se2_partition_max_label(se2_partition const* partition)
 {
   return partition->max_label;
 }
 
-void se2_partition_add_to_stage(se2_partition *partition,
+void se2_partition_add_to_stage(se2_partition* partition,
                                 igraph_integer_t const node_id,
                                 igraph_integer_t const label,
                                 igraph_real_t specificity)
@@ -231,7 +231,7 @@ void se2_partition_add_to_stage(se2_partition *partition,
 }
 
 // Return an unused label.
-igraph_integer_t se2_partition_new_label(se2_partition *partition)
+igraph_integer_t se2_partition_new_label(se2_partition* partition)
 {
   igraph_integer_t pool_size = igraph_vector_int_size(
                                  partition->community_sizes);
@@ -262,7 +262,7 @@ igraph_integer_t se2_partition_new_label(se2_partition *partition)
   return next_label;
 }
 
-static inline void se2_partition_free_label(se2_partition *partition,
+static inline void se2_partition_free_label(se2_partition* partition,
     igraph_integer_t const label)
 {
   VECTOR(*partition->community_sizes)[label] = 0;
@@ -276,13 +276,13 @@ static inline void se2_partition_free_label(se2_partition *partition,
   partition->n_labels--;
 }
 
-igraph_integer_t se2_partition_community_size(se2_partition const *partition,
+igraph_integer_t se2_partition_community_size(se2_partition const* partition,
     igraph_integer_t const label)
 {
   return VECTOR(*partition->community_sizes)[label];
 }
 
-igraph_real_t se2_vector_median(igraph_vector_t const *vec)
+igraph_real_t se2_vector_median(igraph_vector_t const* vec)
 {
   igraph_vector_int_t ids;
   igraph_integer_t len = igraph_vector_size(vec) - 1;
@@ -302,7 +302,7 @@ igraph_real_t se2_vector_median(igraph_vector_t const *vec)
 
   return res;
 }
-igraph_real_t se2_vector_int_median(igraph_vector_int_t const *vec)
+igraph_real_t se2_vector_int_median(igraph_vector_int_t const* vec)
 {
   igraph_vector_int_t ids;
   igraph_integer_t len = igraph_vector_int_size(vec) - 1;
@@ -331,7 +331,7 @@ igraph_integer_t se2_partition_median_community_size(se2_partition const
   }
 
   igraph_vector_int_t community_sizes;
-  se2_iterator *label_iter = se2_iterator_random_label_init(partition, 0);
+  se2_iterator* label_iter = se2_iterator_random_label_init(partition, 0);
   igraph_integer_t res = 0;
 
   igraph_vector_int_init(&community_sizes, partition->n_labels);
@@ -353,7 +353,7 @@ igraph_integer_t se2_partition_median_community_size(se2_partition const
   return res;
 }
 
-void se2_partition_merge_labels(se2_partition *partition, igraph_integer_t c1,
+void se2_partition_merge_labels(se2_partition* partition, igraph_integer_t c1,
                                 igraph_integer_t c2)
 {
   // Ensure smaller community engulfed by larger community. Not necessary.
@@ -374,8 +374,8 @@ void se2_partition_merge_labels(se2_partition *partition, igraph_integer_t c1,
 }
 
 // Move nodes in mask to new label.
-void se2_partition_relabel_mask(se2_partition *partition,
-                                igraph_vector_bool_t const *mask)
+void se2_partition_relabel_mask(se2_partition* partition,
+                                igraph_vector_bool_t const* mask)
 {
   igraph_integer_t label = se2_partition_new_label(partition);
   for (igraph_integer_t i = 0; i < partition->n_nodes; i++) {
@@ -385,7 +385,7 @@ void se2_partition_relabel_mask(se2_partition *partition,
   }
 }
 
-static void se2_partition_recount_community_sizes(se2_partition *partition)
+static void se2_partition_recount_community_sizes(se2_partition* partition)
 {
   partition->n_labels = se2_count_labels(partition->reference,
                                          partition->community_sizes);
@@ -393,13 +393,13 @@ static void se2_partition_recount_community_sizes(se2_partition *partition)
                          1;
 }
 
-void se2_partition_commit_changes(se2_partition *partition)
+void se2_partition_commit_changes(se2_partition* partition)
 {
   igraph_vector_int_update(partition->reference, partition->stage);
   se2_partition_recount_community_sizes(partition);
 }
 
-void se2_reindex_membership(igraph_vector_int_t *membership)
+void se2_reindex_membership(igraph_vector_int_t* membership)
 {
   igraph_vector_int_t indices;
   igraph_integer_t n_nodes = igraph_vector_int_size(membership);
@@ -427,11 +427,11 @@ partition store.
 NOTE: This saves only the membership ids for each node so it goes from a
 se2_partition to an igraph vector despite both arguments being
 "partitions". */
-void se2_partition_store(se2_partition const *working_partition,
-                         igraph_vector_int_list_t *partition_store,
+void se2_partition_store(se2_partition const* working_partition,
+                         igraph_vector_int_list_t* partition_store,
                          igraph_integer_t const idx)
 {
-  igraph_vector_int_t *partition_state = igraph_vector_int_list_get_ptr(
+  igraph_vector_int_t* partition_state = igraph_vector_int_list_get_ptr(
       partition_store, idx);
   igraph_vector_int_update(partition_state, working_partition->reference);
   se2_reindex_membership(partition_state);

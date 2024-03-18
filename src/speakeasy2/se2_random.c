@@ -13,7 +13,7 @@ igraph_error_t se2_rng_init(const int seed)
 }
 
 /* Shuffle the first m elements of the n element vector arr */
-void se2_randperm(igraph_vector_int_t *arr, igraph_integer_t const n,
+void se2_randperm(igraph_vector_int_t* arr, igraph_integer_t const n,
                   igraph_integer_t const m)
 {
   igraph_integer_t swap = 0;
