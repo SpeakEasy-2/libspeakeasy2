@@ -128,9 +128,7 @@ static void se2_remove_diagonal(igraph_t* graph, igraph_vector_t* weights)
   }
 
   if ((weights) && (n_diagonal_edges > 0)) {
-    igraph_vector_remove_section(weights,
-                                 n_edges - n_diagonal_edges,
-                                 n_edges);
+    igraph_vector_remove_section(weights, n_edges - n_diagonal_edges, n_edges);
     igraph_vector_int_resize(&diagonal_eids, n_diagonal_edges);
     igraph_es_vector(&diagonal_es, &diagonal_eids);
 

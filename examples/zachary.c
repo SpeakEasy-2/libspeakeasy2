@@ -5,24 +5,28 @@ int main()
 {
   igraph_t graph;
   igraph_famous(&graph, "Zachary");
-  igraph_vector_int_t membership;
+  igraph_matrix_int_t membership;
   se2_options opts = {
     .random_seed = 1234,
+    .subcluster = 3,
+    .minclust = 2,
     .verbose = true,
   };
 
-  igraph_vector_int_init(&membership, 0);
   speak_easy_2(&graph, NULL, &opts, &membership);
 
   igraph_destroy(&graph);
 
-  printf("[");
-  for (igraph_integer_t i = 0; i < igraph_vector_int_size(&membership); i++) {
-    printf(" %"IGRAPH_PRId, VECTOR(membership)[i]);
+  for (igraph_integer_t i = 0; i < igraph_matrix_int_nrow(&membership); i++) {
+    printf("[");
+    for (igraph_integer_t j = 0; j < igraph_matrix_int_ncol(&membership); j++) {
+      printf(" %"IGRAPH_PRId, MATRIX(membership, i, j));
+    }
+    printf(" ]\n");
   }
-  printf(" ]\n");
+  printf("\n");
 
-  igraph_vector_int_destroy(&membership);
+  igraph_matrix_int_destroy(&membership);
 
   return EXIT_SUCCESS;
 }
