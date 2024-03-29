@@ -26,7 +26,8 @@ static inline void plot_edges(igraph_t const* graph,
         printf(".");
       } else if (VECTOR(*memb)[VECTOR(*order)[i]] ==
                  VECTOR(*memb)[VECTOR(*order)[j]]) {
-        printf(COLOR_GREEN "%ld" COLOR_END, VECTOR(*memb)[VECTOR(*order)[i]]);
+        printf(COLOR_GREEN "%c" COLOR_END,
+               'A' + (int)VECTOR(*memb)[VECTOR(*order)[i]]);
       } else {
         printf(COLOR_BLUE "*" COLOR_END);
       }
