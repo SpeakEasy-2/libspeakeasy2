@@ -58,6 +58,7 @@ igraph_integer_t se2_seeding(igraph_t const* graph,
       VECTOR(unique_labels)[label] = 1;
     }
   }
+  igraph_vector_int_destroy(&unique_labels);
 
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
     if (VECTOR(*kin)[i] == diagonal_weight(graph, i, weights, directed)) {
