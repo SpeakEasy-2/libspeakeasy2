@@ -1,2 +1,6 @@
-add_executable(zachary_example zachary.c)
-target_link_libraries(zachary_example SpeakEasy2)
+file(GLOB examples CONFIGURE_DEPENDS *.c)
+foreach(EXAMPLE ${examples})
+  get_filename_component(exe_name ${EXAMPLE} NAME_WE)
+  add_executable(${exe_name} ${EXAMPLE})
+  target_link_libraries(${exe_name} SpeakEasy2)
+endforeach()

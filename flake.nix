@@ -14,6 +14,7 @@
           cmake
           ninja
           gdb
+          valgrind
           # igraph dependencies
           bison
           flex

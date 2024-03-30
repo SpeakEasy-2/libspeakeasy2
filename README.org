@@ -1,0 +1,172 @@
+#+TITLE: SpeakEasy2: Champagne community detection
+
+[[https://genomebiology.biomedcentral.com/articles/10.1186/s13059-023-03062-0][Genome Biology article]]
+
+This is a port of the SpeakEasy 2 (SE2) community detection algorithm rewritten in C with the help of the [[https://igraph.org/][igraph C library]].
+The original MATLAB code can be found at [[https://github.com/cogdishion/SE2][SE2]].
+
+The main intent of this project is to provide a core C library that can be used to provide packages for high-level languages: [[https://SpeakEasy-2/speakeasy2-toolbox][MATLAB toolbox]], [[https://SpeakEasy-2/python-speakeasy2][python package]], and [[https://SpeakEasy-2/r-speakeasy2][R package]].
+
+At the moment, implementation performs a subset of the original MATLAB version.
+Specifically, provide confidence for node membership, or overlapping community detection.
+
+* Building from source
+This package is built using CMake and uses git submodules to handling some of the dependencies.
+External dependencies needed for building the igraph library are `bison`, `flex`, and `libxml2`.
+
+To download the source, including the git submodules use:
+
+#+begin_src bash :eval no
+  git submodule init && git submodule update --recursive
+#+end_src
+
+Then, to build run:
+#+begin_src bash :eval no
+  cmake -B build .
+  cmake --build build
+#+end_src
+
+This will build the igraph library (as a static library) and the speakeasy2 library (as a CMake object library).
+
+* Examples
+A famous graph (in this case the Zachary karate club graph) can be used to emphasize how to call the SE2 functions.
+
+#+begin_src C :eval no
+  #include "igraph.h"
+  #include "speak_easy_2.h"
+
+  int main()
+  {
+    igraph_t graph;
+    igraph_famous(&graph, "Zachary");
+    igraph_vector_int_t membership;
+    se2_options opts = {};
+
+    igraph_vector_int_init(&membership, 0);
+    speak_easy_2(&graph, NULL, &opts, &membership);
+
+    igraph_destroy(&graph);
+
+    printf("[");
+    for (igraph_integer_t i = 0; i < igraph_vector_int_size(&membership); i++) {
+      printf(" %"IGRAPH_PRId, VECTOR(membership)[i]);
+    }
+    printf(" ]\n");
+
+    igraph_vector_int_destroy(&membership);
+
+    return EXIT_SUCCESS;
+  }
+#+end_src
+
+Instead of the Zachary graph, a graph with clear community structure can specifically be generated using ~igraph~'s preference random game.
+This example is contained in an external file, [[file:examples/block.c]].
+Building the project will create an executable under `build/examples/block` that will display the resulting membership and print an ASCII representation of the adjacency matrix.
+
+#+NAME: strip
+#+BEGIN_SRC elisp :var text="\e[31mHello World\e[0m" :exports none
+(ansi-color-apply text)
+#+END_SRC
+
+#+begin_src bash :exports both :eval yes :results output code :post strip(*this*)
+  build/examples/block
+#+end_src
+
+#+RESULTS:
+#+begin_src bash
+Approximate edge density is 0.27000
+Input type treated as unweighted
+Graph is symmetric
+Calling main routine at level 1
+
+Completed generating initial labels
+Produced about 10 seed labels, while goal was 10
+Starting level 1 clustering; Independent runs might not be displayed in order - that is okay
+Starting independent run #1 of 10
+Starting independent run #6 of 10
+Starting independent run #8 of 10
+Starting independent run #7 of 10
+Starting independent run #3 of 10
+Starting independent run #2 of 10
+Starting independent run #5 of 10
+Starting independent run #9 of 10
+Starting independent run #4 of 10
+Starting independent run #10 of 10
+
+Generated 50 partitions at level 1
+Mean of all NMIs is 1.63486
+
+Membership
+[ 2 1 2 2 0 0 0 3 0 4 4 0 3 2 2 2 2 4 0 2 0 4 3 2 2 4 4 4 2 2 2 2 2 2 4 3 2 3 3 2 ]
+
+Adjacency matrix
+| - C . . C C C C C C . . C C C C C C . . . . . . . . . . . . . . . . . . . . . . |
+| C - C C C C . C C . C C C . . C C C . . * . . . . . * * . . . . . . . * . . . . |
+| . C - C C C C C . . . C C C C C C C . . . . . . * . . * . . . . . . . . . . . . |
+| . C C - C C C . C . C . . C C C . C . . . . . . . * . . . . . . . . . . . . . . |
+| C C C C - C C C C C C C C C C C C C . . . . . . . . . . . . . . . . * . . . . . |
+| C C C C C - C C C . C C . . C C . C . . . . . . . * . . . . * . . . * . . . . . |
+| C . C C C C - . C . C C C C . C . C . . . . . . . . . . . . . . . . * . . . . . |
+| C C C . C C . - C C C C C C C C C C . . . . . . . . . . . . . . . . . . . . . . |
+| C C . C C C C C - C C C C . C C C . . . . . . * . . * . . . * . . . . . . . . . |
+| C . . . C . . C C - C C C C C C C . . . . . . . . * . . . . . . . . . . . . . . |
+| . C . C C C C C C C - C C C C . C . . . * . . . . . . . . . . . . . . . . . . . |
+| . C C . C C C C C C C - . C C C C C . . . . . . . . . . . * . . . . . . . . . . |
+| C C C . C . C C C C C . - C C . C C * . . . . . . . . * . . . . . . . . * . . . |
+| C . C C C . C C . C C C C - C . C C . * . . . . . . . . . . . . . . . . . . . * |
+| C . C C C C . C C C C C C C - C . C . . . . * * . . . . . . . . . . . . . . . . |
+| C C C C C C C C C C . C . . C - C C . * . . . . . . . . . . . . . . . . . . . . |
+| C C C . C . . C C C C C C C . C - . * * . . * . . . . . . . . . * . . . . . . . |
+| C C C C C C C C . . . C C C C C . - . . . . . . * . . . * . . . . . . . . . . . |
+| . . . . . . . . . . . . * . . . * . - E E E . E E E . . . . . . . . . . . . . . |
+| . . . . . . . . . . . . . * . * * . E - E E E E . . * . . . . . . . . . . . . . |
+| . * . . . . . . . . * . . . . . . . E E - E E E . E . . . . * . . . . . * . * . |
+| . . . . . . . . . . . . . . . . . . E E E - E E E E . . . . . . . . . * . . . . |
+| . . . . . . . . . . . . . . * . * . . E E E - . . E . . * . . . . . . . . . . . |
+| . . . . . . . . * . . . . . * . . . E E E E . - E E . . . . . * . . . . . . . . |
+| . . * . . . . . . . . . . . . . . * E . . E . E - E . . . . . * . . . . . . . . |
+| . . . * . * . . . * . . . . . . . . E . E E E E E - . . . . . . . . . . . . . . |
+| . * . . . . . . * . . . . . . . . . . * . . . . . . - . * * * . . . . . * . . . |
+| . * * . . . . . . . . . * . . . . . . . . . . . . . . - A A A A A A . * . . . . |
+| . . . . . . . . . . . . . . . . . * . . . . * . . . * A - A A A A A . . . . . . |
+| . . . . . . . . . . . * . . . . . . . . . . . . . . * A A - A A A A * . . . . * |
+| . . . . . * . . * . . . . . . . . . . . * . . . . . * A A A - . A . . . . . . . |
+| . . . . . . . . . . . . . . . . . . . . . . . * * . . A A A . - A . . . . . . . |
+| . . . . . . . . . . . . . . . . * . . . . . . . . . . A A A A A - A . . . . . . |
+| . . . . . . . . . . . . . . . . . . . . . . . . . . . A A A . . A - . . . . . . |
+| . . . . * * * . . . . . . . . . . . . . . . . . . . . . . * . . . . - D D D . . |
+| . * . . . . . . . . . . . . . . . . . . . * . . . . . * . . . . . . D - . D . D |
+| . . . . . . . . . . . . * . . . . . . . * . . . . . * . . . . . . . D . - D D . |
+| . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . D D D - D D |
+| . . . . . . . . . . . . . . . . . . . . * . . . . . . . . . . . . . . . D D - D |
+| . . . . . . . . . . . . . * . . . . . . . . . . . . . . . * . . . . . D . D D - |
+#+end_src
+
+In the above adjacency matrix, the letters represent edges that are within the community represented by that letter and the asterisks represent edges between communities.
+The nodes are ordered based on the ground truth community structure used to generate the graph.
+
+* Options
+In the above "Zachary" example, there is a line defining and initializing a `se2_options` structure, but is does not set any options.
+The options are defined in the table below:
+
+| Option            | type    | default                                 | effect                                                                                                                                              |
+|-------------------+---------+-----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| independent_runs  | integer | 10                                      | number of independent runs to perform. Each run gets its own set of initial conditions.                                                             |
+| target_partitions | integer | 5                                       | Number of partitions to find per independent run.                                                                                                   |
+| discard_transient | integer | 3                                       | Ignore this many partitions before tracking.                                                                                                        |
+| target_clusters   | integer | dependent on size of graph              | Expected number of clusters to find. Used for creating the initial conditions. The final partition is not constrained to having this many clusters. |
+| random_seed       | integer | randomly generated                      | a random seed for reproducibility.                                                                                                                  |
+| max_threads       | integer | Value returned by ~omp_get_num_threads~ | number of parallel threads to use. (Use 1 to prevent parallel processing.)                                                                          |
+| verbose           | boolean | false                                   | Whether to print extra information about the running process.                                                                                       |
+
+Using the ~se2_options~ struct, options can be set, for example, by replacing the above line with:
+
+#+begin_src diff
+
+  - se2_options opts = {};
+  + se2_options opts = {
+  +	random_seed = 1234,
+  +	verbose = true,
+  +	independent_runs = 5
+  + };
+#+end_src
