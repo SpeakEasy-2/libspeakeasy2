@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Use a block graph for example instead of ZFC to exaggerate community structure.
 - Use org-mode instead of markdown for README to evaluate code.
+- Node ordering now orders by degree within communities.
 
 ## [0.1.1] 2024-03-09
 

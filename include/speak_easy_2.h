@@ -22,6 +22,8 @@ typedef struct {
 
 igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
                             se2_options* opts, igraph_matrix_int_t* res);
-igraph_error_t se2_order_nodes(igraph_matrix_int_t const* memb,
+igraph_error_t se2_order_nodes(igraph_t const* graph,
+                               igraph_vector_t const* weights,
+                               igraph_matrix_int_t const* memb,
                                igraph_vector_int_t* ordering);
 #endif

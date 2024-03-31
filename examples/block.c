@@ -43,7 +43,7 @@ int main()
 
   // Order nodes by ground truth community structure
   igraph_matrix_int_view_from_vector(&gt_membership, &ground_truth, 1);
-  se2_order_nodes(&gt_membership, &ordering);
+  se2_order_nodes(&graph, NULL, &gt_membership, &ordering);
   igraph_vector_int_destroy(&ground_truth);
 
   // Display results

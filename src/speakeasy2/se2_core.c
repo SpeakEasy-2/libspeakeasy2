@@ -472,12 +472,12 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
   igraph_integer_t comm_min = IGRAPH_INTEGER_MAX;
   igraph_integer_t comm_max = 0;
   for (igraph_integer_t i = 0; i < len; i++) {
-    if (MATRIX(*memb, level, start + i) < comm_min) {
-      comm_min = MATRIX(*memb, level, start + i);
+    if (MATRIX(*memb, level, VECTOR(*ordering)[start + i]) < comm_min) {
+      comm_min = MATRIX(*memb, level, VECTOR(*ordering)[start + i]);
     }
 
-    if (MATRIX(*memb, level, start + i) > comm_max) {
-      comm_max = MATRIX(*memb, level, start + i);
+    if (MATRIX(*memb, level, VECTOR(*ordering)[start + i]) > comm_max) {
+      comm_max = MATRIX(*memb, level, VECTOR(*ordering)[start + i]);
     }
   }
 
@@ -486,7 +486,8 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
   igraph_vector_int_init(&pos, n_communities);
 
   for (igraph_integer_t i = 0; i < len; i++) {
-    VECTOR(comm_sizes)[MATRIX(*memb, level, start + i) - comm_min]++;
+    VECTOR(comm_sizes)[MATRIX(*memb, level,
+                              VECTOR(*ordering)[start + i]) - comm_min]++;
   }
 
   igraph_vector_int_t indices;
@@ -506,7 +507,8 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
   }
 
   for (igraph_integer_t i = 0; i < len; i++) {
-    igraph_integer_t comm = MATRIX(*memb, level, start + i) - comm_min;
+    igraph_integer_t comm = MATRIX(*memb, level,
+                                   VECTOR(prev_ordering)[i]) - comm_min;
     VECTOR(*ordering)[VECTOR(pos)[comm]] = VECTOR(prev_ordering)[i];
     VECTOR(pos)[comm]++;
   }
@@ -525,14 +527,22 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
 
 /* Return node indices of each cluster in order from largest-to-smallest
    community. This can be used to display community structure in heat maps. */
-igraph_error_t se2_order_nodes(igraph_matrix_int_t const* memb,
+igraph_error_t se2_order_nodes(igraph_t const* graph,
+                               igraph_vector_t const* weights,
+                               igraph_matrix_int_t const* memb,
                                igraph_vector_int_t* ordering)
 {
   igraph_integer_t const n_nodes = igraph_matrix_int_ncol(memb);
+  igraph_vector_t degrees;
+  igraph_vector_init(&degrees, n_nodes);
   igraph_vector_int_init(ordering, n_nodes);
-  for (igraph_integer_t i = 0; i < n_nodes; i++) {
-    VECTOR(*ordering)[i] = i;
-  }
+  igraph_strength(graph, &degrees, igraph_vss_all(), IGRAPH_ALL, IGRAPH_LOOPS,
+                  weights);
+
+  // Ensure nodes are ordered by highest-lowest degree within communities.
+  igraph_vector_qsort_ind(&degrees, ordering, IGRAPH_DESCENDING);
+  igraph_vector_destroy(&degrees);
+
   se2_order_nodes_i(memb, ordering, 0, 0, n_nodes);
 
   return IGRAPH_SUCCESS;
