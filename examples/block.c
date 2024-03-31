@@ -13,7 +13,7 @@ int main()
   igraph_matrix_int_t membership;
   igraph_vector_int_t ground_truth;
   igraph_matrix_int_t gt_membership;
-  igraph_vector_int_t ordering;
+  igraph_matrix_int_t ordering;
 
   // Generate a graph with clear community structure
   igraph_vector_view(&type_dist, type_dist_arr, n_types);
@@ -51,15 +51,19 @@ int main()
   print_matrix_int(&membership);
 
   puts("Adjacency matrix");
-  igraph_vector_int_t level_membership;
+  igraph_vector_int_t level_membership, level_ordering;
   igraph_vector_int_init(&level_membership,
                          igraph_matrix_int_ncol(&membership));
+  igraph_vector_int_init(&level_ordering, igraph_matrix_int_ncol(&ordering));
+
   igraph_matrix_int_get_row(&membership, &level_membership, 0);
-  plot_edges(&graph, &level_membership, &ordering);
+  igraph_matrix_int_get_row(&ordering, &level_ordering, 0);
+  plot_edges(&graph, &level_membership, &level_ordering);
 
   igraph_vector_int_destroy(&level_membership);
+  igraph_vector_int_destroy(&level_ordering);
   igraph_matrix_int_destroy(&membership);
-  igraph_vector_int_destroy(&ordering);
+  igraph_matrix_int_destroy(&ordering);
   igraph_destroy(&graph);
 
   return EXIT_SUCCESS;
