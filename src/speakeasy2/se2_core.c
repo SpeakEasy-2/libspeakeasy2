@@ -76,7 +76,7 @@ static void se2_most_representative_partition(igraph_vector_int_list_t const
 
   if (opts->verbose && (subcluster == 0)) {
     mean_nmi = igraph_matrix_sum(&nmi_sum_accumulator);
-    mean_nmi /= (n_partitions * (n_partitions - 1)) / 2;
+    mean_nmi /= (n_partitions * (n_partitions - 1));
     printf("Mean of all NMIs is %0.5f\n", mean_nmi);
   }
 
@@ -370,8 +370,8 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
     edge_density *= (!directed + 1);
     printf("Approximate edge density is %0.5f\n"
            "Input type treated as %s\n"
-           "Graph is %s\n"
-           "Calling main routine at level 1\n\n",
+           "Graph is %s\n\n"
+           "Calling main routine at level 1\n",
            edge_density, isweighted ? "weighted" : "unweighted",
            directed ? "asymmetric" : "symmetric");
   }
@@ -386,7 +386,7 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
 
   for (igraph_integer_t level = 1; level < opts->subcluster; level++) {
     if (opts->verbose) {
-      printf("\nSubclustering at level %"IGRAPH_PRId"\n", level);
+      printf("\nSubclustering at level %"IGRAPH_PRId"\n", level + 1);
     }
 
     igraph_vector_int_t prev_memb;
