@@ -1,4 +1,4 @@
-file(GLOB src_files ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
+file(GLOB src_files CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
 add_library(SpeakEasy2
   OBJECT
   ${src_files}
