@@ -501,12 +501,6 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
                                       VECTOR(comm_sizes)[VECTOR(indices)[i - 1]];
   }
 
-  /* igraph_vector_int_t prev_ordering; */
-  /* igraph_vector_int_init(&prev_ordering, len); */
-  /* for (igraph_integer_t i = 0; i < len; i++) { */
-  /*   VECTOR(prev_ordering)[i] = PREV_IDX(start + i); */
-  /* } */
-
   for (igraph_integer_t i = 0; i < len; i++) {
     igraph_integer_t comm = MATRIX(*memb, level, VECTOR(*initial)[start + i]) -
                             comm_min;
@@ -518,7 +512,6 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
   for (igraph_integer_t i = 0; i < len; i++) {
     VECTOR(*initial)[start + i] = MATRIX(*ordering, level, start + i);
   }
-  /* igraph_vector_int_destroy(&prev_ordering); */
 
   igraph_integer_t comm_start = start;
   for (igraph_integer_t i = 0; i < n_communities; i++) {
