@@ -395,7 +395,6 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
 
     igraph_integer_t const n_comms = igraph_vector_int_max(&prev_memb) -
                                      igraph_vector_int_min(&prev_memb);
-    #pragma omp parallel for
     for (igraph_integer_t comm = 0; comm < n_comms; comm++) {
       igraph_vector_int_t member_ids;
       se2_collect_community_members(&prev_memb, &member_ids, comm);

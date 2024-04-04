@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update igraph to 0.10.11.
+- Remove parallel for loop in subclustering (without getting into nested parallelization, performance using parallel across independent runs than across communities since the largest communities take exponentially longer to cluster than smaller communities).
 
 ## [v0.1.2]
 
