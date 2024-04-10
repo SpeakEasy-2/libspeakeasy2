@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Guard against the USING_R cpp macro which breaks examples.
+
 ### Changed
 
 - Update igraph to 0.10.11.

@@ -42,4 +42,8 @@ configure_file(
 
 message(STATUS "${CMAKE_PROJECT_NAME} version: ${CMAKE_PACKAGE_VERSION}")
 add_subdirectory(src/speakeasy2)
-add_subdirectory(examples/)
+
+get_directory_property(definitions COMPILE_DEFINITIONS)
+if (NOT "${definitions}" MATCHES "USING_R")
+  add_subdirectory(examples/)
+endif()
