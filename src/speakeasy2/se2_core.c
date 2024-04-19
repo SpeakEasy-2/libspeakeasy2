@@ -1,7 +1,10 @@
 #include <igraph_error.h>
 #include <igraph_structural.h>
 #include <igraph_community.h>
-#include <omp.h>
+
+#ifdef _OPENMP
+# include <omp.h>
+#endif
 
 #include "speak_easy_2.h"
 #include "se2_seeding.h"
@@ -57,10 +60,16 @@ static void se2_most_representative_partition(igraph_vector_int_list_t const
   igraph_matrix_init(&nmi_sum_accumulator, n_partitions, opts->max_threads);
   igraph_vector_init(&nmi_sums, n_partitions);
 
-  #pragma omp parallel for
+#ifdef _OPENMP
+  #pragma omp parallel for num_threads(opts->max_threads)
+#endif
   for (igraph_integer_t i = 0; i < n_partitions; i++) {
     igraph_real_t nmi;
+#ifdef _OPENMP
     igraph_integer_t thread_i = omp_get_thread_num();
+#else
+    igraph_integer_t thread_i = 0;
+#endif
     for (igraph_integer_t j = (i + 1); j < n_partitions; j++) {
       igraph_compare_communities(
         igraph_vector_int_list_get_ptr(partition_store, i),
@@ -120,7 +129,9 @@ static void se2_bootstrap(igraph_t* graph,
     puts("attempting overlapping clustering");
   }
 
-  #pragma omp parallel for
+#ifdef _OPENMP
+  #pragma omp parallel for num_threads(opts->max_threads)
+#endif
   for (igraph_integer_t run_i = 0; run_i < opts->independent_runs; run_i++) {
     igraph_integer_t partition_offset = run_i * opts->target_partitions;
     igraph_vector_int_t ic_store;
@@ -179,13 +190,15 @@ static igraph_integer_t default_target_clusters(igraph_t const* graph)
 
 static igraph_integer_t default_max_threads()
 {
-  igraph_integer_t n_threads = 0;
+  igraph_integer_t n_threads = 1;
   // Hack since omp_get_num_threads returns 1 outside of a parallel block
+#ifdef _OPENMP
   #pragma omp parallel
   {
     #pragma omp single
     n_threads = omp_get_num_threads();
   }
+#endif
   return n_threads;
 }
 
@@ -202,8 +215,6 @@ static void se2_set_defaults(igraph_t const* graph, se2_options* opts)
   SE2_SET_OPTION(opts, max_threads, default_max_threads());
   SE2_SET_OPTION(opts, node_confidence, false);
   SE2_SET_OPTION(opts, verbose, false);
-
-  omp_set_num_threads(opts->max_threads);
 }
 
 static void se2_collect_community_members(igraph_vector_int_t const* memb,

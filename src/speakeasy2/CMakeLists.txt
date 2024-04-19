@@ -4,11 +4,15 @@ add_library(SpeakEasy2
   ${src_files}
 )
 
-find_package(OpenMP)
+target_link_libraries(SpeakEasy2 PUBLIC igraph)
 
-target_link_libraries(SpeakEasy2
-  PUBLIC igraph OpenMP::OpenMP_C
-)
+find_package(OpenMP)
+if (OpenMP_C_FOUND)
+  message(STATUS "Found OpenMP")
+  target_link_libraries(SpeakEasy2 PUBLIC OpenMP::OpenMP_C)
+else ()
+  message(STATUS "OpenMP not found. Compiling without OMP support.")
+endif ()
 
 target_include_directories(SpeakEasy2
   PUBLIC ${PROJECT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR}/include
