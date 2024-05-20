@@ -11,8 +11,10 @@ At the moment, implementation performs a subset of the original MATLAB version.
 Specifically, provide confidence for node membership, or overlapping community detection.
 
 * Building from source
-This package is built using CMake and uses git submodules to handling some of the dependencies.
-External dependencies needed for building the igraph library are `bison`, `flex`, and `libxml2`.
+This package is built using CMake and uses git submodules to handle some of the dependencies.
+External dependencies needed for building the igraph library are a C and C++ compiler, ~bison~, ~flex~, and ~libxml2~.
+Additionally, optional dependencies may improve performance and reduce the amount of source code that needs to be compiled.
+Optional dependencies are: ~gmp~, ~glpk~, ~arpack~, ~plfit~, ~blas~, and ~lapack~.
 
 To download the source, including the git submodules use:
 
@@ -149,15 +151,17 @@ The nodes are ordered based on the ground truth community structure used to gene
 In the above "Zachary" example, there is a line defining and initializing a `se2_options` structure, but is does not set any options.
 The options are defined in the table below:
 
-| Option            | type    | default                                 | effect                                                                                                                                              |
-|-------------------+---------+-----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| independent_runs  | integer | 10                                      | number of independent runs to perform. Each run gets its own set of initial conditions.                                                             |
-| target_partitions | integer | 5                                       | Number of partitions to find per independent run.                                                                                                   |
-| discard_transient | integer | 3                                       | Ignore this many partitions before tracking.                                                                                                        |
-| target_clusters   | integer | dependent on size of graph              | Expected number of clusters to find. Used for creating the initial conditions. The final partition is not constrained to having this many clusters. |
-| random_seed       | integer | randomly generated                      | a random seed for reproducibility.                                                                                                                  |
-| max_threads       | integer | Value returned by ~omp_get_num_threads~ | number of parallel threads to use. (Use 1 to prevent parallel processing.)                                                                          |
-| verbose           | boolean | false                                   | Whether to print extra information about the running process.                                                                                       |
+| Option            | type    |                               default | effect                                                                                                                                                                                                                       |
+|-------------------+---------+---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| independent_runs  | integer |                                    10 | number of independent runs to perform. Each run gets its own set of initial conditions.                                                                                                                                      |
+| target_partitions | integer |                                     5 | Number of partitions to find per independent run.                                                                                                                                                                            |
+| discard_transient | integer |                                     3 | Ignore this many partitions before tracking.                                                                                                                                                                                 |
+| target_clusters   | integer |            dependent on size of graph | Expected number of clusters to find. Used for creating the initial conditions. The final partition is not constrained to having this many clusters.                                                                          |
+| subcluster        | integer |                                     1 | Degree of subclustering. If greater than 1, each initial community is independently subclustered into a smaller set of communities. In turn those communities are further subclustered and so on ~subcluster~ number of times. |
+| minclust          | integer |                                     5 | The minimum size of a cluster to consider for subclustering. If a cluster has fewer nodes than this, it will not be further subclustered.                                                                                    |
+| random_seed       | integer |                    randomly generated | a random seed for reproducibility.                                                                                                                                                                                           |
+| max_threads       | integer | Value returned by ~omp_get_num_threads~ | number of parallel threads to use. (Use 1 to prevent parallel processing.)                                                                                                                                                   |
+| verbose           | boolean |                                 false | Whether to print extra information about the running process.                                                                                                                                                                |
 
 Using the ~se2_options~ struct, options can be set, for example, by replacing the above line with:
 
