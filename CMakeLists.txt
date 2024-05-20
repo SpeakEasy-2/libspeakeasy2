@@ -34,7 +34,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/include/se2_version.h
 )
 
-message(STATUS "${CMAKE_PROJECT_NAME} version: ${CMAKE_PACKAGE_VERSION}")
+message(STATUS "${PROJECT_NAME} version: ${CMAKE_PACKAGE_VERSION}")
 add_subdirectory(src/speakeasy2)
 
 get_directory_property(definitions COMPILE_DEFINITIONS)
