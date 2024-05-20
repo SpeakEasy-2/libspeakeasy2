@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Don't explicitly use internal igraph dependencies.
+- Update to igraph 0.10.12
 
 ## [v0.1.3] 2024-04-19
 
