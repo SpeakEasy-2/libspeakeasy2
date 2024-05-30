@@ -12,6 +12,8 @@
 #include "se2_modes.h"
 #include "se2_reweight_graph.h"
 
+#include "igraph_constructors.h"
+
 #define SE2_SET_OPTION(opts, field, default) \
     (opts->field) = (opts)->field ? (opts)->field : (default)
 

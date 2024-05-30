@@ -1,7 +1,9 @@
 #ifndef SPEAK_EASY_H
 #define SPEAK_EASY_H
 
-#include <igraph.h>
+#include "igraph_datatype.h"
+#include "igraph_vector.h"
+#include "igraph_matrix.h"
 
 typedef struct {
   igraph_integer_t independent_runs;  // Number of independent runs to perform.
