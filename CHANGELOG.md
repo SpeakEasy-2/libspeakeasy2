@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Print header to modify print behavior on a programming language basis.
+
 ### Changed
 
 - Don't explicitly use internal igraph dependencies.

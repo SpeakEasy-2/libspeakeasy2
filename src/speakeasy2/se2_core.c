@@ -1,18 +1,18 @@
 #include <igraph_error.h>
 #include <igraph_structural.h>
 #include <igraph_community.h>
+#include <igraph_constructors.h>
 
 #ifdef _OPENMP
 # include <omp.h>
 #endif
 
 #include "speak_easy_2.h"
+#include "se2_print.h"
 #include "se2_seeding.h"
 #include "se2_random.h"
 #include "se2_modes.h"
 #include "se2_reweight_graph.h"
-
-#include "igraph_constructors.h"
 
 #define SE2_SET_OPTION(opts, field, default) \
     (opts->field) = (opts)->field ? (opts)->field : (default)
@@ -88,7 +88,7 @@ static void se2_most_representative_partition(igraph_vector_int_list_t const
   if (opts->verbose && (subcluster == 0)) {
     mean_nmi = igraph_matrix_sum(&nmi_sum_accumulator);
     mean_nmi /= (n_partitions * (n_partitions - 1));
-    printf("Mean of all NMIs is %0.5f\n", mean_nmi);
+    se2_printf("Mean of all NMIs is %0.5f\n", mean_nmi);
   }
 
   for (igraph_integer_t i = 0; i < n_partitions; i++) {
@@ -128,7 +128,7 @@ static void se2_bootstrap(igraph_t* graph,
   igraph_vector_int_list_init(&partition_store, n_partitions);
 
   if ((opts->verbose) && (!subcluster_iter) && (opts->multicommunity > 1)) {
-    puts("attempting overlapping clustering");
+    se2_puts("attempting overlapping clustering");
   }
 
 #ifdef _OPENMP
@@ -145,25 +145,26 @@ static void se2_bootstrap(igraph_t* graph,
     igraph_vector_int_list_set(&partition_store, partition_offset, &ic_store);
 
     if ((opts->verbose) && (!subcluster_iter) && (run_i == 0)) {
-      printf("Completed generating initial labels\n"
-             "Produced about %"IGRAPH_PRId" seed labels, "
-             "while goal was %"IGRAPH_PRId"\n"
-             "Starting level 1 clustering; "
-             "Independent runs might not be displayed in order - "
-             "that is okay\n",
-             n_unique, opts->target_clusters);
+      se2_printf("Completed generating initial labels\n"
+                 "Produced about %"IGRAPH_PRId" seed labels, "
+                 "while goal was %"IGRAPH_PRId"\n"
+                 "Starting level 1 clustering; "
+                 "Independent runs might not be displayed in order - "
+                 "that is okay\n",
+                 n_unique, opts->target_clusters);
     }
 
     if ((opts->verbose) && (!subcluster_iter)) {
-      printf("Starting independent run #%"IGRAPH_PRId" of %"IGRAPH_PRId"\n",
-             run_i + 1, opts->independent_runs);
+      se2_printf("Starting independent run #%"IGRAPH_PRId" of %"IGRAPH_PRId"\n",
+                 run_i + 1, opts->independent_runs);
     }
 
     se2_core(graph, weights, &partition_store, partition_offset, opts);
   }
 
   if ((opts->verbose) && (!subcluster_iter)) {
-    printf("\nGenerated %"IGRAPH_PRId" partitions at level 1\n", n_partitions);
+    se2_printf("\nGenerated %"IGRAPH_PRId" partitions at level 1\n",
+               n_partitions);
   }
 
   se2_most_representative_partition(&partition_store,
@@ -381,12 +382,12 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
                                  possible_edges;
     igraph_bool_t directed = igraph_is_directed(graph);
     edge_density *= (!directed + 1);
-    printf("Approximate edge density is %0.5f\n"
-           "Input type treated as %s\n"
-           "Graph is %s\n\n"
-           "Calling main routine at level 1\n",
-           edge_density, isweighted ? "weighted" : "unweighted",
-           directed ? "asymmetric" : "symmetric");
+    se2_printf("Approximate edge density is %0.5f\n"
+               "Input type treated as %s\n"
+               "Graph is %s\n\n"
+               "Calling main routine at level 1\n",
+               edge_density, isweighted ? "weighted" : "unweighted",
+               directed ? "asymmetric" : "symmetric");
   }
 
   igraph_matrix_int_init(memb, opts->subcluster, igraph_vcount(graph));
@@ -399,7 +400,7 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
 
   for (igraph_integer_t level = 1; level < opts->subcluster; level++) {
     if (opts->verbose) {
-      printf("\nSubclustering at level %"IGRAPH_PRId"\n", level + 1);
+      se2_printf("\nSubclustering at level %"IGRAPH_PRId"\n", level + 1);
     }
 
     igraph_vector_int_t prev_memb;
@@ -458,7 +459,7 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
   igraph_vector_int_destroy(&level_memb);
 
   if (opts->verbose) {
-    printf("\n");
+    se2_printf("\n");
   }
 
   return IGRAPH_SUCCESS;

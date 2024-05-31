@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "se2_print.h"
 #include "se2_partitions.h"
 #include "se2_random.h"
 
@@ -46,7 +47,7 @@ se2_partition* se2_partition_init(igraph_t const* graph,
   igraph_integer_t n_labels = 0;
 
   if (igraph_vector_int_size(initial_labels) != n_nodes) {
-    printf("Membership vector size differs from number of vertices.");
+    se2_printf("Membership vector size differs from number of vertices.");
     return NULL;
   }
 

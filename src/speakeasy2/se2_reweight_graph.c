@@ -1,3 +1,4 @@
+#include "se2_print.h"
 #include "se2_reweight_graph.h"
 
 #define ABS(a) (a) > 0 ? (a) : -(a);
@@ -86,7 +87,7 @@ static void se2_new_diagonal(igraph_t* graph, igraph_vector_t* weights,
   igraph_vector_init(&diagonal_weights, n_diagonal_edges);
 
   if (is_skewed) {
-    puts("high skew to edge weight distribution; reweighting main diag");
+    se2_puts("high skew to edge weight distribution; reweighting main diag");
     se2_mean_link_weight(graph, weights, &diagonal_weights);
   } else {
     igraph_vector_fill(&diagonal_weights, 1);
@@ -166,7 +167,7 @@ static void se2_add_offset(igraph_t const* graph, igraph_vector_t* weights)
   igraph_integer_t n_edges = igraph_ecount(graph);
   igraph_real_t offset = 0;
 
-  puts("adding very small offset to all edges");
+  se2_puts("adding very small offset to all edges");
 
   // Diagonal weights are the last n_node weights.
   for (igraph_integer_t i = (n_edges - n_nodes); i < n_edges; i++) {
