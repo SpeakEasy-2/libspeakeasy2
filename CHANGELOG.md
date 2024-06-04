@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Don't explicitly use internal igraph dependencies.
-- Update to igraph 0.10.12
-- Explicitly include needed igraph headers instead of catchall "igraph.h"
+- Update to igraph 0.10.12.
+- Explicitly include needed igraph headers instead of catchall "igraph.h".
+- Touch up printed statements.
 
 ## [v0.1.3] 2024-04-19
 
