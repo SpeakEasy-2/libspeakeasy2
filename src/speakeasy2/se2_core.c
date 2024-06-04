@@ -145,26 +145,37 @@ static void se2_bootstrap(igraph_t* graph,
                                             &ic_store);
     igraph_vector_int_list_set(&partition_store, partition_offset, &ic_store);
 
-    if ((opts->verbose) && (!subcluster_iter) && (run_i == 0)) {
-      se2_printf("Completed generating initial labels\n"
-                 "Produced about %"IGRAPH_PRId" seed labels, "
-                 "while goal was %"IGRAPH_PRId"\n"
-                 "Starting level 1 clustering; "
-                 "Independent runs might not be displayed in order - "
-                 "that is okay\n",
-                 n_unique, opts->target_clusters);
-    }
+#ifdef _OPENMP
+    #pragma omp critical
+    {
+#endif
+      if ((opts->verbose) && (!subcluster_iter) && (run_i == 0)) {
+        se2_printf("Completed generating initial labels.\n"
+                   "Produced %"IGRAPH_PRId" seed labels, "
+                   "while goal was %"IGRAPH_PRId".\n\n"
+                   "Starting level 1 clustering",
+                   n_unique, opts->target_clusters);
+#ifdef _OPENMP
+        se2_printf("; Independent runs might not be displayed in order - "
+                   "that is okay...\n");
+#else
+        se2_printf("...\n");
+#endif
+      }
 
-    if ((opts->verbose) && (!subcluster_iter)) {
-      se2_printf("Starting independent run #%"IGRAPH_PRId" of %"IGRAPH_PRId"\n",
-                 run_i + 1, opts->independent_runs);
+      if ((opts->verbose) && (!subcluster_iter)) {
+        se2_printf("Starting independent run #%"IGRAPH_PRId" of %"IGRAPH_PRId"\n",
+                   run_i + 1, opts->independent_runs);
+      }
+#ifdef _OPENMP
     }
+#endif
 
     se2_core(graph, weights, &partition_store, partition_offset, opts);
   }
 
   if ((opts->verbose) && (!subcluster_iter)) {
-    se2_printf("\nGenerated %"IGRAPH_PRId" partitions at level 1\n",
+    se2_printf("\nGenerated %"IGRAPH_PRId" partitions at level 1.\n",
                n_partitions);
   }
 

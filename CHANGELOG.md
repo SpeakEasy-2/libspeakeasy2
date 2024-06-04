@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Print header to modify print behavior on a programming language basis.
 
+### Fixed
+
+- Add OMP critical block to ensure print statements don't run in parallel. This was causing errors with R's `Rprintf` but I believe `printf` isn't guaranteed thread safe either. Should not impact performance since this occurs once per thread before starting the real work.
+
 ### Changed
 
 - Don't explicitly use internal igraph dependencies.
