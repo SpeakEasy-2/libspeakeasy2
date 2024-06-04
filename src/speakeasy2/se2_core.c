@@ -7,6 +7,10 @@
 # include <omp.h>
 #endif
 
+#ifndef _OPENMP
+# define omp_get_thread_num() 0;
+#endif
+
 #include "speak_easy_2.h"
 #include "se2_print.h"
 #include "se2_seeding.h"
@@ -67,11 +71,8 @@ static void se2_most_representative_partition(igraph_vector_int_list_t const
 #endif
   for (igraph_integer_t i = 0; i < n_partitions; i++) {
     igraph_real_t nmi;
-#ifdef _OPENMP
     igraph_integer_t thread_i = omp_get_thread_num();
-#else
-    igraph_integer_t thread_i = 0;
-#endif
+
     for (igraph_integer_t j = (i + 1); j < n_partitions; j++) {
       igraph_compare_communities(
         igraph_vector_int_list_get_ptr(partition_store, i),
