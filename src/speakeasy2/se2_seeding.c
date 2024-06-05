@@ -69,4 +69,4 @@ igraph_integer_t se2_seeding(igraph_t const* graph,
   }
 
   return n_unique;
-};
+}
