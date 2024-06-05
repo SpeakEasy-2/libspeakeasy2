@@ -203,7 +203,7 @@ static igraph_integer_t default_target_clusters(igraph_t const* graph)
   return n_nodes / 100;
 }
 
-static igraph_integer_t default_max_threads()
+static igraph_integer_t default_max_threads(void)
 {
   igraph_integer_t n_threads = 1;
   // Hack since omp_get_num_threads returns 1 outside of a parallel block
