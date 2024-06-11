@@ -1,7 +1,7 @@
 {
   description = "Igraph SE2 implementation";
 
-  inputs = { nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11"; };
+  inputs = { nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05"; };
 
   outputs = { self, nixpkgs }:
     let
