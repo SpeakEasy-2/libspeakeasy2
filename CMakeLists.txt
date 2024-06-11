@@ -3,15 +3,14 @@ cmake_minimum_required(VERSION 3.18)
 project(
   SpeakEasy2
   DESCRIPTION "igraph implementation of SpeakEasy2 community detection."
-  LANGUAGES C CXX
+  LANGUAGES C
 )
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(BUILD_SHARED_LIBS OFF)
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
-add_subdirectory(vendor/igraph)
+add_subdirectory(vendor)
 
 if ("${CMAKE_PACKAGE_VERSION}" STREQUAL "")
   if (NOT GIT_FOUND)

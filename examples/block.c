@@ -1,4 +1,4 @@
-#include <igraph.h>
+#include "igraph_games.h"
 #include "speak_easy_2.h"
 #include "plot_adj.h"
 
@@ -16,10 +16,10 @@ int main()
   igraph_matrix_int_t ordering;
 
   // Generate a graph with clear community structure
-  igraph_vector_view(&type_dist, type_dist_arr, n_types);
-  igraph_vector_int_init(&ground_truth, 0);
+  igraph_vector_view( &type_dist, type_dist_arr, n_types);
+  igraph_vector_int_init( &ground_truth, 0);
 
-  igraph_matrix_init(&pref_mat, n_types, n_types);
+  igraph_matrix_init( &pref_mat, n_types, n_types);
   igraph_real_t p_in = 1 - mu, p_out = mu / (n_types - 1);
   for (igraph_integer_t i = 0; i < n_types; i++) {
     for (igraph_integer_t j = 0; j < n_types; j++) {
@@ -27,10 +27,10 @@ int main()
     }
   }
 
-  igraph_preference_game(&graph, n_nodes, n_types, &type_dist, false,
-                         &pref_mat, &ground_truth, IGRAPH_UNDIRECTED, false);
+  igraph_preference_game( &graph, n_nodes, n_types, &type_dist, false,
+                          &pref_mat, &ground_truth, IGRAPH_UNDIRECTED, false);
 
-  igraph_matrix_destroy(&pref_mat);
+  igraph_matrix_destroy( &pref_mat);
 
   // Running SpeakEasy2
   se2_options opts = {
@@ -39,32 +39,32 @@ int main()
     .verbose = true,
   };
 
-  speak_easy_2(&graph, NULL, &opts, &membership);
+  speak_easy_2( &graph, NULL, &opts, &membership);
 
   // Order nodes by ground truth community structure
-  igraph_matrix_int_view_from_vector(&gt_membership, &ground_truth, 1);
-  se2_order_nodes(&graph, NULL, &gt_membership, &ordering);
-  igraph_vector_int_destroy(&ground_truth);
+  igraph_matrix_int_view_from_vector( &gt_membership, &ground_truth, 1);
+  se2_order_nodes( &graph, NULL, &gt_membership, &ordering);
+  igraph_vector_int_destroy( &ground_truth);
 
   // Display results
   puts("Membership");
-  print_matrix_int(&membership);
+  print_matrix_int( &membership);
 
   puts("Adjacency matrix");
   igraph_vector_int_t level_membership, level_ordering;
-  igraph_vector_int_init(&level_membership,
-                         igraph_matrix_int_ncol(&membership));
-  igraph_vector_int_init(&level_ordering, igraph_matrix_int_ncol(&ordering));
+  igraph_vector_int_init( &level_membership,
+                          igraph_matrix_int_ncol( &membership));
+  igraph_vector_int_init( &level_ordering, igraph_matrix_int_ncol( &ordering));
 
-  igraph_matrix_int_get_row(&membership, &level_membership, 0);
-  igraph_matrix_int_get_row(&ordering, &level_ordering, 0);
-  plot_edges(&graph, &level_membership, &level_ordering);
+  igraph_matrix_int_get_row( &membership, &level_membership, 0);
+  igraph_matrix_int_get_row( &ordering, &level_ordering, 0);
+  plot_edges( &graph, &level_membership, &level_ordering);
 
-  igraph_vector_int_destroy(&level_membership);
-  igraph_vector_int_destroy(&level_ordering);
-  igraph_matrix_int_destroy(&membership);
-  igraph_matrix_int_destroy(&ordering);
-  igraph_destroy(&graph);
+  igraph_vector_int_destroy( &level_membership);
+  igraph_vector_int_destroy( &level_ordering);
+  igraph_matrix_int_destroy( &membership);
+  igraph_matrix_int_destroy( &ordering);
+  igraph_destroy( &graph);
 
-  return EXIT_SUCCESS;
+  return IGRAPH_SUCCESS;
 }

@@ -63,8 +63,8 @@ static void se2_most_representative_partition(igraph_vector_int_list_t const
   igraph_real_t max_nmi = -1;
   igraph_real_t mean_nmi = 0;
 
-  igraph_matrix_init(&nmi_sum_accumulator, n_partitions, opts->max_threads);
-  igraph_vector_init(&nmi_sums, n_partitions);
+  igraph_matrix_init( &nmi_sum_accumulator, n_partitions, opts->max_threads);
+  igraph_vector_init( &nmi_sums, n_partitions);
 
 #ifdef _OPENMP
   #pragma omp parallel for num_threads(opts->max_threads)
@@ -84,11 +84,11 @@ static void se2_most_representative_partition(igraph_vector_int_list_t const
     }
   }
 
-  igraph_matrix_rowsum(&nmi_sum_accumulator, &nmi_sums);
+  igraph_matrix_rowsum( &nmi_sum_accumulator, &nmi_sums);
 
   if (opts->verbose && (subcluster == 0)) {
-    mean_nmi = igraph_matrix_sum(&nmi_sum_accumulator);
-    mean_nmi /= (n_partitions * (n_partitions - 1));
+    mean_nmi = igraph_matrix_sum( &nmi_sum_accumulator);
+    mean_nmi /= (n_partitions* (n_partitions - 1));
     se2_printf("Mean of all NMIs is %0.5f.\n", mean_nmi);
   }
 
@@ -99,14 +99,14 @@ static void se2_most_representative_partition(igraph_vector_int_list_t const
     }
   }
 
-  igraph_matrix_destroy(&nmi_sum_accumulator);
-  igraph_vector_destroy(&nmi_sums);
+  igraph_matrix_destroy( &nmi_sum_accumulator);
+  igraph_vector_destroy( &nmi_sums);
 
   selected_partition = igraph_vector_int_list_get_ptr(partition_store, idx);
 
   igraph_integer_t n_nodes = igraph_vector_int_size(selected_partition);
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
-    VECTOR(*most_representative_partition)[i] = VECTOR(*selected_partition)[i];
+    VECTOR(* most_representative_partition)[i] = VECTOR(* selected_partition)[i];
   }
 }
 
@@ -118,15 +118,15 @@ static void se2_bootstrap(igraph_t* graph,
 {
   igraph_integer_t n_nodes = igraph_vcount(graph);
   igraph_vector_t kin;
-  igraph_integer_t n_partitions = opts->target_partitions *
+  igraph_integer_t n_partitions = opts->target_partitions*
                                   opts->independent_runs;
   igraph_vector_int_list_t partition_store;
 
-  igraph_vector_init(&kin, n_nodes);
+  igraph_vector_init( &kin, n_nodes);
   igraph_strength(graph, &kin, igraph_vss_all(), IGRAPH_IN, IGRAPH_LOOPS,
                   weights);
 
-  igraph_vector_int_list_init(&partition_store, n_partitions);
+  igraph_vector_int_list_init( &partition_store, n_partitions);
 
   if ((opts->verbose) && (!subcluster_iter) && (opts->multicommunity > 1)) {
     se2_puts("Attempting overlapping clustering.");
@@ -136,14 +136,14 @@ static void se2_bootstrap(igraph_t* graph,
   #pragma omp parallel for num_threads(opts->max_threads)
 #endif
   for (igraph_integer_t run_i = 0; run_i < opts->independent_runs; run_i++) {
-    igraph_integer_t partition_offset = run_i * opts->target_partitions;
+    igraph_integer_t partition_offset = run_i* opts->target_partitions;
     igraph_vector_int_t ic_store;
-    igraph_vector_int_init(&ic_store, n_nodes);
+    igraph_vector_int_init( &ic_store, n_nodes);
 
     se2_rng_init(run_i + opts->random_seed);
     igraph_integer_t n_unique = se2_seeding(graph, weights, &kin, opts,
                                             &ic_store);
-    igraph_vector_int_list_set(&partition_store, partition_offset, &ic_store);
+    igraph_vector_int_list_set( &partition_store, partition_offset, &ic_store);
 
 #ifdef _OPENMP
     #pragma omp critical
@@ -179,13 +179,12 @@ static void se2_bootstrap(igraph_t* graph,
                n_partitions);
   }
 
-  se2_most_representative_partition(&partition_store,
-                                    n_partitions,
-                                    memb, opts, subcluster_iter);
+  se2_most_representative_partition( &partition_store,
+                                     n_partitions,
+                                     memb, opts, subcluster_iter);
 
-  igraph_vector_int_list_destroy(&partition_store);
-
-  igraph_vector_destroy(&kin);
+  igraph_vector_int_list_destroy( &partition_store);
+  igraph_vector_destroy( &kin);
 }
 
 static igraph_integer_t default_target_clusters(igraph_t const* graph)
@@ -237,14 +236,14 @@ static void se2_collect_community_members(igraph_vector_int_t const* memb,
 {
   igraph_integer_t n_memb = 0;
   for (igraph_integer_t i = 0; i < igraph_vector_int_size(memb); i++) {
-    n_memb += VECTOR(*memb)[i] == comm;
+    n_memb += VECTOR(* memb)[i] == comm;
   }
 
   igraph_vector_int_init(idx, n_memb);
   igraph_integer_t count = 0;
   for (igraph_integer_t i = 0; i < igraph_vector_int_size(memb); i++) {
-    if (VECTOR(*memb)[i] == comm) {
-      VECTOR(*idx)[count] = i;
+    if (VECTOR(* memb)[i] == comm) {
+      VECTOR(* idx)[count] = i;
       count++;
     }
   }
@@ -265,13 +264,13 @@ static void se2_reindex_edges(igraph_vector_int_t* edges)
   igraph_integer_t const n_nodes = 1 + igraph_vector_int_max(edges) -
                                    igraph_vector_int_min(edges);
 
-  igraph_vector_int_init(&ids, n_nodes);
+  igraph_vector_int_init( &ids, n_nodes);
   for (igraph_integer_t i = 0; i < igraph_vector_int_size(edges); i++) {
-    VECTOR(ids)[VECTOR(*edges)[i] - vmin]++;
+    VECTOR(ids)[VECTOR(* edges)[i] - vmin]++;
   }
 
   igraph_integer_t shift = 0;
-  for (igraph_integer_t i = 0; i < igraph_vector_int_size(&ids); i++) {
+  for (igraph_integer_t i = 0; i < igraph_vector_int_size( &ids); i++) {
     if (VECTOR(ids)[i] == 0) {
       shift++;
     } else {
@@ -280,10 +279,10 @@ static void se2_reindex_edges(igraph_vector_int_t* edges)
   }
 
   for (igraph_integer_t i = 0; i < igraph_vector_int_size(edges); i++) {
-    VECTOR(*edges)[i] -= VECTOR(ids)[VECTOR(*edges)[i] - vmin] + vmin;
+    VECTOR(* edges)[i] -= VECTOR(ids)[VECTOR(* edges)[i] - vmin] + vmin;
   }
 
-  igraph_vector_int_destroy(&ids);
+  igraph_vector_int_destroy( &ids);
 }
 
 static void se2_subgraph_from_community(igraph_t const* origin,
@@ -295,17 +294,17 @@ static void se2_subgraph_from_community(igraph_t const* origin,
   igraph_real_t const density = (igraph_real_t)igraph_ecount(origin) /
                                 igraph_vcount(origin);
   igraph_vector_int_t edges, edge_ids;
-  igraph_integer_t n_edges = ceil(density * igraph_vector_int_size(members));
+  igraph_integer_t n_edges = ceil(density* igraph_vector_int_size(members));
   igraph_eit_t eit;
 
-  igraph_vector_int_init(&edge_ids, n_edges);
+  igraph_vector_int_init( &edge_ids, n_edges);
 
   igraph_eit_create(origin, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
   igraph_integer_t edge_count = 0;
   while (!IGRAPH_EIT_END(eit)) {
     if (edge_count == n_edges) {
       n_edges *= 2;
-      igraph_vector_int_resize(&edge_ids, n_edges);
+      igraph_vector_int_resize( &edge_ids, n_edges);
     }
 
     igraph_integer_t eid = IGRAPH_EIT_GET(eit);
@@ -317,18 +316,18 @@ static void se2_subgraph_from_community(igraph_t const* origin,
 
     IGRAPH_EIT_NEXT(eit);
   }
-  igraph_vector_int_resize(&edge_ids, edge_count);
+  igraph_vector_int_resize( &edge_ids, edge_count);
 
   if (origin_weights) {
     igraph_vector_init(sub_weights, edge_count);
     for (igraph_integer_t i = 0; i < edge_count; i++) {
-      VECTOR(*sub_weights)[i] = VECTOR(*origin_weights)[VECTOR(edge_ids)[i]];
+      VECTOR(* sub_weights)[i] = VECTOR(* origin_weights)[VECTOR(edge_ids)[i]];
     }
   } else {
     igraph_vector_init(sub_weights, 0);
   }
 
-  igraph_vector_int_init(&edges, edge_count * 2);
+  igraph_vector_int_init( &edges, edge_count * 2);
   for (igraph_integer_t i = 0; i < edge_count; i++) {
     igraph_integer_t to, from;
     igraph_edge(origin, VECTOR(edge_ids)[i], &from, &to);
@@ -336,13 +335,13 @@ static void se2_subgraph_from_community(igraph_t const* origin,
     VECTOR(edges)[1 + (i * 2)] = to;
   }
 
-  se2_reindex_edges(&edges);
+  se2_reindex_edges( &edges);
   igraph_create(subgraph, &edges, igraph_vector_int_size(members),
                 igraph_is_directed(origin));
 
-  igraph_vector_int_destroy(&edge_ids);
-  igraph_vector_int_destroy(&edges);
-  igraph_eit_destroy(&eit);
+  igraph_vector_int_destroy( &edge_ids);
+  igraph_vector_int_destroy( &edges);
+  igraph_eit_destroy( &eit);
 }
 
 /* For hierarchical clustering, each community from the previous level gets
@@ -359,16 +358,16 @@ static void se2_relabel_hierarchical_communities(igraph_vector_int_t const*
   for (igraph_integer_t i = 0; i < n_comms; i++) {
     igraph_vector_int_t member_ids;
     se2_collect_community_members(prev_membs, &member_ids, i);
-    for (igraph_integer_t j = 0; j < igraph_vector_int_size(&member_ids); j++) {
-      igraph_integer_t local_label = VECTOR(*level_membs)[VECTOR(member_ids)[j]];
+    for (igraph_integer_t j = 0; j < igraph_vector_int_size( &member_ids); j++) {
+      igraph_integer_t local_label = VECTOR(* level_membs)[VECTOR(member_ids)[j]];
 
-      VECTOR(*level_membs)[VECTOR(member_ids)[j]] += prev_max;
+      VECTOR(* level_membs)[VECTOR(member_ids)[j]] += prev_max;
       if ((local_label + prev_max) > curr_max) {
         curr_max = local_label + prev_max;
       }
     }
     prev_max = curr_max + 1;
-    igraph_vector_int_destroy(&member_ids);
+    igraph_vector_int_destroy( &member_ids);
   }
 }
 
@@ -381,7 +380,7 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
     igraph_bool_t isweighted = false;
     if (weights) {
       for (igraph_integer_t i = 0; i < igraph_ecount(graph); i++) {
-        if (VECTOR(*weights)[i] != 1) {
+        if (VECTOR(* weights)[i] != 1) {
           isweighted = true;
           break;
         }
@@ -405,7 +404,7 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
   igraph_matrix_int_init(memb, opts->subcluster, igraph_vcount(graph));
 
   igraph_vector_int_t level_memb;
-  igraph_vector_int_init(&level_memb, igraph_vcount(graph));
+  igraph_vector_int_init( &level_memb, igraph_vcount(graph));
   se2_reweight(graph, weights);
   se2_bootstrap(graph, weights, 0, opts, &level_memb);
   igraph_matrix_int_set_row(memb, &level_memb, 0);
@@ -416,22 +415,22 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
     }
 
     igraph_vector_int_t prev_memb;
-    igraph_vector_int_init(&prev_memb, igraph_matrix_int_ncol(memb));
+    igraph_vector_int_init( &prev_memb, igraph_matrix_int_ncol(memb));
     igraph_matrix_int_get_row(memb, &prev_memb, level - 1);
 
-    igraph_integer_t const n_comms = igraph_vector_int_max(&prev_memb) -
-                                     igraph_vector_int_min(&prev_memb);
+    igraph_integer_t const n_comms = igraph_vector_int_max( &prev_memb) -
+                                     igraph_vector_int_min( &prev_memb);
     for (igraph_integer_t comm = 0; comm < n_comms; comm++) {
       igraph_vector_int_t member_ids;
-      se2_collect_community_members(&prev_memb, &member_ids, comm);
-      igraph_integer_t const n_membs = igraph_vector_int_size(&member_ids);
+      se2_collect_community_members( &prev_memb, &member_ids, comm);
+      igraph_integer_t const n_membs = igraph_vector_int_size( &member_ids);
 
       if (n_membs <= opts->minclust) {
         for (igraph_integer_t i = 0; i < n_membs; i++) {
           VECTOR(level_memb)[VECTOR(member_ids)[i]] = 0;
         }
 
-        igraph_vector_int_destroy(&member_ids);
+        igraph_vector_int_destroy( &member_ids);
         continue;
       }
 
@@ -440,35 +439,35 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
       igraph_vector_t* subgraph_weights_ptr = NULL;
       igraph_vector_int_t subgraph_memb;
 
-      igraph_vector_int_init(&subgraph_memb, n_membs);
+      igraph_vector_int_init( &subgraph_memb, n_membs);
       se2_subgraph_from_community(graph, weights, &subgraph, &subgraph_weights,
                                   &member_ids);
 
-      if (igraph_vector_size(&subgraph_weights) > 0) {
+      if (igraph_vector_size( &subgraph_weights) > 0) {
         subgraph_weights_ptr = &subgraph_weights;
       }
 
-      se2_reweight(&subgraph, subgraph_weights_ptr);
-      se2_bootstrap(&subgraph, subgraph_weights_ptr, level, opts,
-                    &subgraph_memb);
+      se2_reweight( &subgraph, subgraph_weights_ptr);
+      se2_bootstrap( &subgraph, subgraph_weights_ptr, level, opts,
+                     &subgraph_memb);
 
-      for (igraph_integer_t i = 0; i < igraph_vector_int_size(&subgraph_memb);
+      for (igraph_integer_t i = 0; i < igraph_vector_int_size( &subgraph_memb);
            i++) {
         VECTOR(level_memb)[VECTOR(member_ids)[i]] = VECTOR(subgraph_memb)[i];
       }
 
-      igraph_vector_int_destroy(&member_ids);
-      igraph_vector_destroy(&subgraph_weights);
-      igraph_vector_int_destroy(&subgraph_memb);
-      igraph_destroy(&subgraph);
+      igraph_vector_int_destroy( &member_ids);
+      igraph_vector_destroy( &subgraph_weights);
+      igraph_vector_int_destroy( &subgraph_memb);
+      igraph_destroy( &subgraph);
     }
 
-    se2_relabel_hierarchical_communities(&prev_memb, &level_memb);
+    se2_relabel_hierarchical_communities( &prev_memb, &level_memb);
     igraph_matrix_int_set_row(memb, &level_memb, level);
-    igraph_vector_int_destroy(&prev_memb);
+    igraph_vector_int_destroy( &prev_memb);
   }
 
-  igraph_vector_int_destroy(&level_memb);
+  igraph_vector_int_destroy( &level_memb);
 
   if (opts->verbose) {
     se2_printf("\n");
@@ -498,27 +497,27 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
   igraph_integer_t comm_min = IGRAPH_INTEGER_MAX;
   igraph_integer_t comm_max = 0;
   for (igraph_integer_t i = 0; i < len; i++) {
-    if (MATRIX(*memb, level, VECTOR(*initial)[start + i]) < comm_min) {
-      comm_min = MATRIX(*memb, level, VECTOR(*initial)[start + i]);
+    if (MATRIX(* memb, level, VECTOR(* initial)[start + i]) < comm_min) {
+      comm_min = MATRIX(* memb, level, VECTOR(* initial)[start + i]);
     }
 
-    if (MATRIX(*memb, level, VECTOR(*initial)[start + i]) > comm_max) {
-      comm_max = MATRIX(*memb, level, VECTOR(*initial)[start + i]);
+    if (MATRIX(* memb, level, VECTOR(* initial)[start + i]) > comm_max) {
+      comm_max = MATRIX(* memb, level, VECTOR(* initial)[start + i]);
     }
   }
 
   igraph_integer_t const n_communities = comm_max - comm_min + 1;
-  igraph_vector_int_init(&comm_sizes, n_communities);
-  igraph_vector_int_init(&pos, n_communities);
+  igraph_vector_int_init( &comm_sizes, n_communities);
+  igraph_vector_int_init( &pos, n_communities);
 
   for (igraph_integer_t i = 0; i < len; i++) {
-    VECTOR(comm_sizes)[MATRIX(*memb, level,
-                              VECTOR(*initial)[start + i]) - comm_min]++;
+    VECTOR(comm_sizes)[MATRIX(* memb, level,
+                              VECTOR(* initial)[start + i]) - comm_min]++;
   }
 
   igraph_vector_int_t indices;
-  igraph_vector_int_init(&indices, n_communities);
-  igraph_vector_int_qsort_ind(&comm_sizes, &indices, IGRAPH_DESCENDING);
+  igraph_vector_int_init( &indices, n_communities);
+  igraph_vector_int_qsort_ind( &comm_sizes, &indices, IGRAPH_DESCENDING);
 
   VECTOR(pos)[VECTOR(indices)[0]] = start;
   for (igraph_integer_t i = 1; i < n_communities; i++) {
@@ -527,15 +526,15 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
   }
 
   for (igraph_integer_t i = 0; i < len; i++) {
-    igraph_integer_t comm = MATRIX(*memb, level, VECTOR(*initial)[start + i]) -
+    igraph_integer_t comm = MATRIX(* memb, level, VECTOR(* initial)[start + i]) -
                             comm_min;
-    MATRIX(*ordering, level, VECTOR(pos)[comm]) = VECTOR(*initial)[start + i];
+    MATRIX(* ordering, level, VECTOR(pos)[comm]) = VECTOR(* initial)[start + i];
     VECTOR(pos)[comm]++;
   }
-  igraph_vector_int_destroy(&pos);
+  igraph_vector_int_destroy( &pos);
 
   for (igraph_integer_t i = 0; i < len; i++) {
-    VECTOR(*initial)[start + i] = MATRIX(*ordering, level, start + i);
+    VECTOR(* initial)[start + i] = MATRIX(* ordering, level, start + i);
   }
 
   igraph_integer_t comm_start = start;
@@ -544,8 +543,8 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
     se2_order_nodes_i(memb, initial, ordering, level + 1, comm_start, comm_len);
     comm_start += comm_len;
   }
-  igraph_vector_int_destroy(&comm_sizes);
-  igraph_vector_int_destroy(&indices);
+  igraph_vector_int_destroy( &comm_sizes);
+  igraph_vector_int_destroy( &indices);
 }
 
 /* Return node indices of each cluster in order from largest-to-smallest
@@ -557,21 +556,21 @@ igraph_error_t se2_order_nodes(igraph_t const* graph,
 {
   igraph_integer_t const n_nodes = igraph_matrix_int_ncol(memb);
   igraph_vector_t degrees;
-  igraph_vector_init(&degrees, n_nodes);
+  igraph_vector_init( &degrees, n_nodes);
   igraph_matrix_int_init(ordering, igraph_matrix_int_nrow(memb), n_nodes);
   igraph_strength(graph, &degrees, igraph_vss_all(), IGRAPH_ALL, IGRAPH_LOOPS,
                   weights);
 
   // Ensure nodes are ordered by highest-lowest degree within communities.
   igraph_vector_int_t init_ordering;
-  igraph_vector_int_init(&init_ordering, n_nodes);
+  igraph_vector_int_init( &init_ordering, n_nodes);
 
-  igraph_vector_qsort_ind(&degrees, &init_ordering, IGRAPH_DESCENDING);
+  igraph_vector_qsort_ind( &degrees, &init_ordering, IGRAPH_DESCENDING);
 
-  igraph_vector_destroy(&degrees);
+  igraph_vector_destroy( &degrees);
 
   se2_order_nodes_i(memb, &init_ordering, ordering, 0, 0, n_nodes);
-  igraph_vector_int_destroy(&init_ordering);
+  igraph_vector_int_destroy( &init_ordering);
 
   return IGRAPH_SUCCESS;
 }
