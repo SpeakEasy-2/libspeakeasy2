@@ -9,6 +9,13 @@ project(
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+option(SE2_PARALLEL "Process independent runs in parallel" ON)
+
+find_package(OpenMP)
+if (SE2_PARALLEL AND NOT OpenMP_C_FOUND)
+  set(SE2_PARALLEL OFF)
+  message(WARNING "OpenMP not found. Compiling without parallel support")
+endif ()
 
 add_subdirectory(vendor)
 

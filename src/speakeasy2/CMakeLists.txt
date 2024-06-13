@@ -5,16 +5,8 @@ add_library(SpeakEasy2
 
 target_link_libraries(SpeakEasy2 PUBLIC igraph)
 
-if (${IGRAPH_THREAD_SAFE})
-  find_package(OpenMP)
-  if (OpenMP_C_FOUND)
-    message(STATUS "Found OpenMP")
-    target_link_libraries(SpeakEasy2 PUBLIC OpenMP::OpenMP_C)
-  else ()
-    message(STATUS "OpenMP not found. Compiling without OMP support.")
-  endif ()
-else ()
-  message(STATUS "Not compiled thread safe, compiling without OMP support.")
+if (SE2_PARALLEL AND IGRAPH_THREAD_SAFE)
+  target_link_libraries(SpeakEasy2 PUBLIC OpenMP::OpenMP_C)
 endif ()
 
 target_include_directories(SpeakEasy2
