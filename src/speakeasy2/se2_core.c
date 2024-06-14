@@ -1,15 +1,11 @@
+#ifdef SE2PAR
+#  include <pthread.h>
+#endif
+
 #include <igraph_error.h>
 #include <igraph_structural.h>
 #include <igraph_community.h>
 #include <igraph_constructors.h>
-
-#ifdef _OPENMP
-# include <omp.h>
-#endif
-
-#ifndef _OPENMP
-# define omp_get_thread_num() 0;
-#endif
 
 #include "speak_easy_2.h"
 #include "se2_print.h"
@@ -17,6 +13,8 @@
 #include "se2_random.h"
 #include "se2_modes.h"
 #include "se2_reweight_graph.h"
+
+igraph_bool_t greeting_printed = false;
 
 #define SE2_SET_OPTION(opts, field, default) \
     (opts->field) = (opts)->field ? (opts)->field : (default)
@@ -51,6 +49,35 @@ static igraph_error_t se2_core(igraph_t const* graph,
   return errorcode;
 }
 
+struct represent_parameters {
+  igraph_integer_t tid;
+  se2_options* opts;
+  igraph_integer_t n_partitions;
+  igraph_vector_int_list_t* partition_store;
+  igraph_matrix_t* nmi_sum_accumulator;
+};
+
+static void* se2_thread_mrp(void* parameters)
+{
+  struct represent_parameters* p = (struct represent_parameters*)parameters;
+  igraph_real_t nmi;
+
+  igraph_integer_t n_threads = p->opts->max_threads;
+  for (igraph_integer_t i = p->tid; i < p->n_partitions; i += n_threads) {
+    for (igraph_integer_t j = (i + 1); j < p->n_partitions; j++) {
+      igraph_compare_communities(
+        igraph_vector_int_list_get_ptr(p->partition_store, i),
+        igraph_vector_int_list_get_ptr(p->partition_store, j),
+        &nmi,
+        IGRAPH_COMMCMP_NMI);
+      MATRIX(* p->nmi_sum_accumulator, i, p->tid) += nmi;
+      MATRIX(* p->nmi_sum_accumulator, j, p->tid) += nmi;
+    }
+  }
+
+  return NULL;
+}
+
 static void se2_most_representative_partition(igraph_vector_int_list_t const
     *partition_store, igraph_integer_t const n_partitions,
     igraph_vector_int_t* most_representative_partition,
@@ -66,23 +93,30 @@ static void se2_most_representative_partition(igraph_vector_int_list_t const
   igraph_matrix_init( &nmi_sum_accumulator, n_partitions, opts->max_threads);
   igraph_vector_init( &nmi_sums, n_partitions);
 
-#ifdef _OPENMP
-  #pragma omp parallel for num_threads(opts->max_threads)
-#endif
-  for (igraph_integer_t i = 0; i < n_partitions; i++) {
-    igraph_real_t nmi;
-    igraph_integer_t thread_i = omp_get_thread_num();
+  struct represent_parameters args[opts->max_threads];
 
-    for (igraph_integer_t j = (i + 1); j < n_partitions; j++) {
-      igraph_compare_communities(
-        igraph_vector_int_list_get_ptr(partition_store, i),
-        igraph_vector_int_list_get_ptr(partition_store, j),
-        &nmi,
-        IGRAPH_COMMCMP_NMI);
-      MATRIX(nmi_sum_accumulator, i, thread_i) += nmi;
-      MATRIX(nmi_sum_accumulator, j, thread_i) += nmi;
-    }
+#ifdef SE2PAR
+  pthread_t threads[opts->max_threads];
+#endif
+  for (igraph_integer_t tid = 0; tid < opts->max_threads; tid++) {
+    args[tid].tid = tid;
+    args[tid].opts = (se2_options*)opts;
+    args[tid].n_partitions = n_partitions;
+    args[tid].partition_store = (igraph_vector_int_list_t*)partition_store;
+    args[tid].nmi_sum_accumulator = &nmi_sum_accumulator;
+
+#ifdef SE2PAR
+    pthread_create( &threads[tid], NULL, se2_thread_mrp, (void*) &args[tid]);
+#else
+    se2_thread_mrp((void*) &args[tid]);
+#endif
   }
+
+#ifdef SE2PAR
+  for (igraph_integer_t tid = 0; tid < opts->max_threads; tid++) {
+    pthread_join(threads[tid], NULL);
+  }
+#endif
 
   igraph_matrix_rowsum( &nmi_sum_accumulator, &nmi_sums);
 
@@ -110,6 +144,71 @@ static void se2_most_representative_partition(igraph_vector_int_list_t const
   }
 }
 
+struct bootstrap_params {
+  igraph_integer_t tid;
+  igraph_integer_t n_nodes;
+  igraph_t* graph;
+  igraph_vector_t* weights;
+  igraph_integer_t subcluster_iter;
+  igraph_vector_t* kin;
+  igraph_vector_int_list_t* partition_store;
+  se2_options* opts;
+  pthread_mutex_t* print_mutex;
+  igraph_vector_int_t* memb;
+};
+
+static void* se2_thread_bootstrap(void* parameters)
+{
+  struct bootstrap_params const* p = (struct bootstrap_params*)parameters;
+
+  igraph_integer_t n_threads = p->opts->max_threads;
+  igraph_integer_t independent_runs = p->opts->independent_runs;
+  for (igraph_integer_t run_i = p->tid; run_i < independent_runs;
+       run_i += n_threads) {
+    igraph_integer_t partition_offset = run_i* p->opts->target_partitions;
+    igraph_vector_int_t ic_store;
+    igraph_vector_int_init( &ic_store, p->n_nodes);
+
+    se2_rng_init(run_i + p->opts->random_seed);
+    igraph_integer_t n_unique = se2_seeding(p->graph, p->weights, p->kin,
+                                            p->opts, &ic_store);
+    igraph_vector_int_list_set(p->partition_store, partition_offset, &ic_store);
+
+    if ((p->opts->verbose) && (!p->subcluster_iter)) {
+#ifdef SE2PAR
+      pthread_mutex_lock(p->print_mutex);
+#endif
+
+      if (!greeting_printed) {
+        greeting_printed = true;
+        se2_printf("Completed generating initial labels.\n"
+                   "Produced %"IGRAPH_PRId" seed labels, "
+                   "while goal was %"IGRAPH_PRId".\n\n"
+                   "Starting level 1 clustering",
+                   n_unique, p->opts->target_clusters);
+
+        if (p->opts->max_threads > 1) {
+          se2_printf("; independent runs might not be displayed in order - "
+                     "that is okay...\n");
+        } else {
+          se2_printf("...\n");
+        }
+      }
+
+      se2_printf("Starting independent run #%"IGRAPH_PRId" of %"IGRAPH_PRId"\n",
+                 run_i + 1, p->opts->independent_runs);
+
+#ifdef SE2PAR
+      pthread_mutex_unlock(p->print_mutex);
+#endif
+    }
+
+    se2_core(p->graph, p->weights, p->partition_store, partition_offset, p->opts);
+  }
+
+  return NULL;
+}
+
 static void se2_bootstrap(igraph_t* graph,
                           igraph_vector_t const* weights,
                           igraph_integer_t const subcluster_iter,
@@ -132,47 +231,43 @@ static void se2_bootstrap(igraph_t* graph,
     se2_puts("Attempting overlapping clustering.");
   }
 
-#ifdef _OPENMP
-  #pragma omp parallel for num_threads(opts->max_threads)
-#endif
-  for (igraph_integer_t run_i = 0; run_i < opts->independent_runs; run_i++) {
-    igraph_integer_t partition_offset = run_i* opts->target_partitions;
-    igraph_vector_int_t ic_store;
-    igraph_vector_int_init( &ic_store, n_nodes);
-
-    se2_rng_init(run_i + opts->random_seed);
-    igraph_integer_t n_unique = se2_seeding(graph, weights, &kin, opts,
-                                            &ic_store);
-    igraph_vector_int_list_set( &partition_store, partition_offset, &ic_store);
-
-#ifdef _OPENMP
-    #pragma omp critical
-    {
-#endif
-      if ((opts->verbose) && (!subcluster_iter) && (run_i == 0)) {
-        se2_printf("Completed generating initial labels.\n"
-                   "Produced %"IGRAPH_PRId" seed labels, "
-                   "while goal was %"IGRAPH_PRId".\n\n"
-                   "Starting level 1 clustering",
-                   n_unique, opts->target_clusters);
-#ifdef _OPENMP
-        se2_printf("; Independent runs might not be displayed in order - "
-                   "that is okay...\n");
+#ifdef SE2PAR
+  pthread_t threads[opts->max_threads];
+  pthread_mutex_t print_mutex;
+  pthread_mutex_init( &print_mutex, NULL);
 #else
-        se2_printf("...\n");
-#endif
-      }
-
-      if ((opts->verbose) && (!subcluster_iter)) {
-        se2_printf("Starting independent run #%"IGRAPH_PRId" of %"IGRAPH_PRId"\n",
-                   run_i + 1, opts->independent_runs);
-      }
-#ifdef _OPENMP
-    }
+  pthread_mutex_t print_mutex = { };
 #endif
 
-    se2_core(graph, weights, &partition_store, partition_offset, opts);
+  struct bootstrap_params args[opts->max_threads];
+
+  for (igraph_integer_t tid = 0; tid < opts->max_threads; tid++) {
+    args[tid].tid = tid;
+    args[tid].n_nodes = n_nodes;
+    args[tid].graph = graph;
+    args[tid].weights = (igraph_vector_t*)weights;
+    args[tid].subcluster_iter = subcluster_iter;
+    args[tid].kin = &kin;
+    args[tid].partition_store = &partition_store;
+    args[tid].opts = (se2_options*)opts;
+    args[tid].print_mutex = &print_mutex;
+    args[tid].memb = memb;
+
+#ifdef SE2PAR
+    pthread_create( &threads[tid], NULL, se2_thread_bootstrap,
+                    (void*) &args[tid]);
+#else
+    se2_thread_bootstrap((void*) &args[tid]);
+#endif
   }
+
+#ifdef SE2PAR
+  for (igraph_integer_t tid = 0; tid < opts->max_threads; tid++) {
+    pthread_join(threads[tid], NULL);
+  }
+
+  pthread_mutex_destroy( &print_mutex);
+#endif
 
   if ((opts->verbose) && (!subcluster_iter)) {
     se2_printf("\nGenerated %"IGRAPH_PRId" partitions at level 1.\n",
@@ -202,16 +297,11 @@ static igraph_integer_t default_target_clusters(igraph_t const* graph)
   return n_nodes / 100;
 }
 
-static igraph_integer_t default_max_threads(void)
+static igraph_integer_t default_max_threads(igraph_integer_t const runs)
 {
   igraph_integer_t n_threads = 1;
-  // Hack since omp_get_num_threads returns 1 outside of a parallel block
-#ifdef _OPENMP
-  #pragma omp parallel
-  {
-    #pragma omp single
-    n_threads = omp_get_num_threads();
-  }
+#ifdef SE2PAR
+  n_threads = runs;
 #endif
   return n_threads;
 }
@@ -226,7 +316,8 @@ static void se2_set_defaults(igraph_t const* graph, se2_options* opts)
   SE2_SET_OPTION(opts, minclust, 5);
   SE2_SET_OPTION(opts, discard_transient, 3);
   SE2_SET_OPTION(opts, random_seed, RNG_INTEGER(1, 9999));
-  SE2_SET_OPTION(opts, max_threads, default_max_threads());
+  SE2_SET_OPTION(opts, max_threads,
+                 default_max_threads(opts->independent_runs));
   SE2_SET_OPTION(opts, node_confidence, false);
   SE2_SET_OPTION(opts, verbose, false);
 }
@@ -375,6 +466,15 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
                             se2_options* opts, igraph_matrix_int_t* memb)
 {
   se2_set_defaults(graph, opts);
+
+#ifndef SE2PAR
+  if (opts->max_threads > 1) {
+    se2_warn("SpeakEasy 2 was not compiled with thread support. "
+             "Ignoring `max_threads`.\n\n"
+             "To suppress this warning do not set `max_threads`.");
+    opts->max_threads = 1;
+  }
+#endif
 
   if (opts->verbose) {
     igraph_bool_t isweighted = false;

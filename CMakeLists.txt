@@ -11,10 +11,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(SE2_PARALLEL "Process independent runs in parallel" ON)
 
-find_package(OpenMP)
-if (SE2_PARALLEL AND NOT OpenMP_C_FOUND)
+find_package(Threads)
+if (SE2_PARALLEL AND NOT Threads_FOUND)
   set(SE2_PARALLEL OFF)
-  message(WARNING "OpenMP not found. Compiling without parallel support")
+  message(WARNING "Threads not found. Compiling without parallel support")
 endif ()
 
 add_subdirectory(vendor)

@@ -6,7 +6,8 @@ add_library(SpeakEasy2
 target_link_libraries(SpeakEasy2 PUBLIC igraph)
 
 if (SE2_PARALLEL AND IGRAPH_THREAD_SAFE)
-  target_link_libraries(SpeakEasy2 PUBLIC OpenMP::OpenMP_C)
+  target_compile_definitions(SpeakEasy2 PRIVATE SE2PAR)
+  target_link_libraries(SpeakEasy2 PUBLIC Threads::Threads)
 endif ()
 
 target_include_directories(SpeakEasy2
