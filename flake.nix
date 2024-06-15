@@ -10,9 +10,6 @@
     in {
       devShells.${system}.default = pkgs.mkShell {
         packages = (with pkgs; [ astyle cmake ninja gdb valgrind ]);
-        shellHook = ''
-          export OMP_NUM_THREADS=16
-        '';
       };
     };
 }
