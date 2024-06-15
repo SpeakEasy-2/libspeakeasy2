@@ -153,7 +153,9 @@ struct bootstrap_params {
   igraph_vector_t* kin;
   igraph_vector_int_list_t* partition_store;
   se2_options* opts;
+#ifdef SE2PAR
   pthread_mutex_t* print_mutex;
+#endif
   igraph_vector_int_t* memb;
 };
 
@@ -235,8 +237,6 @@ static void se2_bootstrap(igraph_t* graph,
   pthread_t threads[opts->max_threads];
   pthread_mutex_t print_mutex;
   pthread_mutex_init( &print_mutex, NULL);
-#else
-  pthread_mutex_t print_mutex = { };
 #endif
 
   struct bootstrap_params args[opts->max_threads];
@@ -250,7 +250,9 @@ static void se2_bootstrap(igraph_t* graph,
     args[tid].kin = &kin;
     args[tid].partition_store = &partition_store;
     args[tid].opts = (se2_options*)opts;
+#ifdef SE2PAR
     args[tid].print_mutex = &print_mutex;
+#endif
     args[tid].memb = memb;
 
 #ifdef SE2PAR
