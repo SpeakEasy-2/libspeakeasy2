@@ -171,7 +171,8 @@ static void* se2_thread_bootstrap(void* parameters)
     igraph_vector_int_t ic_store;
     igraph_vector_int_init( &ic_store, p->n_nodes);
 
-    se2_rng_init(run_i + p->opts->random_seed);
+    igraph_rng_t rng, * old_rng;
+    old_rng = se2_rng_init( &rng, run_i + p->opts->random_seed);
     igraph_integer_t n_unique = se2_seeding(p->graph, p->weights, p->kin,
                                             p->opts, &ic_store);
     igraph_vector_int_list_set(p->partition_store, partition_offset, &ic_store);
@@ -206,6 +207,8 @@ static void* se2_thread_bootstrap(void* parameters)
     }
 
     se2_core(p->graph, p->weights, p->partition_store, partition_offset, p->opts);
+
+    se2_rng_restore( &rng, old_rng);
   }
 
   return NULL;
