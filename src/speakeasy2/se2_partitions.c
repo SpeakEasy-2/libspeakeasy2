@@ -237,8 +237,8 @@ igraph_integer_t se2_partition_new_label(se2_partition* partition)
   igraph_integer_t pool_size = igraph_vector_int_size(
                                  partition->community_sizes);
   igraph_integer_t next_label = 0;
-  while ((VECTOR(* partition->community_sizes)[next_label]) &&
-         (next_label < pool_size)) {
+  while ((next_label < pool_size) &&
+         (VECTOR(* partition->community_sizes)[next_label])) {
     next_label++;
   }
 
