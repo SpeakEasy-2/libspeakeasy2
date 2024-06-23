@@ -35,10 +35,10 @@ struct se2_tracker {
 
 se2_tracker* se2_tracker_init(se2_options const* opts)
 {
-  se2_tracker* tracker = malloc(sizeof(*tracker));
+  se2_tracker* tracker = malloc(sizeof(* tracker));
 
   igraph_integer_t* time_since_mode_tracker = calloc(SE2_NUM_MODES,
-    sizeof(*time_since_mode_tracker));
+    sizeof(* time_since_mode_tracker));
 
   se2_tracker new_tracker = {
     .mode = SE2_TYPICAL,
