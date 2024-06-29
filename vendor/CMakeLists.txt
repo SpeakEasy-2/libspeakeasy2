@@ -134,6 +134,10 @@ else()
   target_compile_definitions(igraph PRIVATE igraph_EXPORTS)
 endif()
 
+if (WIN32)
+  target_compile_definitions(igraph PRIVATE MSDOS)
+endif()
+
 target_link_libraries(igraph PRIVATE m)
 
 include(GenerateExportHeader)
