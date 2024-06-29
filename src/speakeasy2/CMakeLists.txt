@@ -1,17 +1,13 @@
 file(GLOB src_files CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
 add_library(SpeakEasy2
-  OBJECT
   ${src_files}
 )
 
 target_link_libraries(SpeakEasy2 PUBLIC igraph)
 
-find_package(OpenMP)
-if (OpenMP_C_FOUND)
-  message(STATUS "Found OpenMP")
-  target_link_libraries(SpeakEasy2 PUBLIC OpenMP::OpenMP_C)
-else ()
-  message(STATUS "OpenMP not found. Compiling without OMP support.")
+if (SE2_PARALLEL AND IGRAPH_THREAD_SAFE)
+  target_compile_definitions(SpeakEasy2 PRIVATE SE2PAR)
+  target_link_libraries(SpeakEasy2 PUBLIC Threads::Threads)
 endif ()
 
 target_include_directories(SpeakEasy2

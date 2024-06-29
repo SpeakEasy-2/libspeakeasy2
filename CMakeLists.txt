@@ -3,15 +3,21 @@ cmake_minimum_required(VERSION 3.18)
 project(
   SpeakEasy2
   DESCRIPTION "igraph implementation of SpeakEasy2 community detection."
-  LANGUAGES C CXX
+  LANGUAGES C
 )
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(BUILD_SHARED_LIBS OFF)
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+option(SE2_PARALLEL "Process independent runs in parallel" ON)
 
-add_subdirectory(vendor/igraph)
+find_package(Threads)
+if (SE2_PARALLEL AND NOT Threads_FOUND)
+  set(SE2_PARALLEL OFF)
+  message(WARNING "Threads not found. Compiling without parallel support")
+endif ()
+
+add_subdirectory(vendor)
 
 if ("${CMAKE_PACKAGE_VERSION}" STREQUAL "")
   if (NOT GIT_FOUND)
@@ -36,6 +42,11 @@ configure_file(
 
 message(STATUS "${PROJECT_NAME} version: ${CMAKE_PACKAGE_VERSION}")
 add_subdirectory(src/speakeasy2)
+
+if (DEBUG)
+  add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address -fno-omit-frame-pointer)
+endif ()
 
 get_directory_property(definitions COMPILE_DEFINITIONS)
 if (NOT "${definitions}" MATCHES "USING_R")

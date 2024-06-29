@@ -1,6 +1,6 @@
 #+TITLE: SpeakEasy2: Champagne community detection
 
-[[https://genomebiology.biomedcentral.com/articles/10.1186/s13059-023-03062-0][Genome Biology article]]
+[[https://genomebiology.biomedcentral.com/articles/10.1186/s13059-023-03062-0][https://img.shields.io/badge/publication-Genome_Biology-%2300A1D7.svg]]
 
 This is a port of the SpeakEasy 2 (SE2) community detection algorithm rewritten in C with the help of the [[https://igraph.org/][igraph C library]].
 The original MATLAB code can be found at [[https://github.com/cogdishion/SE2][SE2]].
@@ -8,13 +8,10 @@ The original MATLAB code can be found at [[https://github.com/cogdishion/SE2][SE
 The main intent of this project is to provide a core C library that can be used to provide packages for high-level languages: [[https://SpeakEasy-2/speakeasy2-toolbox][MATLAB toolbox]], [[https://SpeakEasy-2/python-speakeasy2][python package]], and [[https://SpeakEasy-2/r-speakeasy2][R package]].
 
 At the moment, implementation performs a subset of the original MATLAB version.
-Specifically, provide confidence for node membership, or overlapping community detection.
+Specifically, this version does not provide confidence for node membership or overlapping community detection.
 
 * Building from source
 This package is built using CMake and uses git submodules to handle some of the dependencies.
-External dependencies needed for building the igraph library are a C and C++ compiler, ~bison~, ~flex~, and ~libxml2~.
-Additionally, optional dependencies may improve performance and reduce the amount of source code that needs to be compiled.
-Optional dependencies are: ~gmp~, ~glpk~, ~arpack~, ~plfit~, ~blas~, and ~lapack~.
 
 To download the source, including the git submodules use:
 
@@ -28,7 +25,14 @@ Then, to build run:
   cmake --build build
 #+end_src
 
-This will build the igraph library (as a static library) and the speakeasy2 library (as a CMake object library).
+This will build SpeakEasy 2 as a static library.
+To build a shared library, define ~-D BUILD_SHARED_LIBS=ON~ in the configure step:
+
+#+begin_src bash :eval no
+  cmake -B build -D BUILD_SHARED_LIBS=ON .
+#+end_src
+
+If ~pthreads~ is found, the library will be compiled to run in parallel. To turn off parallel processing use the ~-D SE@_PARALLEL=OFF~ in the configure step. At run time using ~max_threads = 1~ will also turn off parallel processing.
 
 * Examples
 A famous graph (in this case the Zachary karate club graph) can be used to emphasize how to call the SE2 functions.
@@ -151,17 +155,17 @@ The nodes are ordered based on the ground truth community structure used to gene
 In the above "Zachary" example, there is a line defining and initializing a `se2_options` structure, but is does not set any options.
 The options are defined in the table below:
 
-| Option            | type    |                               default | effect                                                                                                                                                                                                                       |
-|-------------------+---------+---------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| independent_runs  | integer |                                    10 | number of independent runs to perform. Each run gets its own set of initial conditions.                                                                                                                                      |
-| target_partitions | integer |                                     5 | Number of partitions to find per independent run.                                                                                                                                                                            |
-| discard_transient | integer |                                     3 | Ignore this many partitions before tracking.                                                                                                                                                                                 |
-| target_clusters   | integer |            dependent on size of graph | Expected number of clusters to find. Used for creating the initial conditions. The final partition is not constrained to having this many clusters.                                                                          |
-| subcluster        | integer |                                     1 | Degree of subclustering. If greater than 1, each initial community is independently subclustered into a smaller set of communities. In turn those communities are further subclustered and so on ~subcluster~ number of times. |
-| minclust          | integer |                                     5 | The minimum size of a cluster to consider for subclustering. If a cluster has fewer nodes than this, it will not be further subclustered.                                                                                    |
-| random_seed       | integer |                    randomly generated | a random seed for reproducibility.                                                                                                                                                                                           |
-| max_threads       | integer | Value returned by ~omp_get_num_threads~ | number of parallel threads to use. (Use 1 to prevent parallel processing.)                                                                                                                                                   |
-| verbose           | boolean |                                 false | Whether to print extra information about the running process.                                                                                                                                                                |
+| Option            | type    |                    default | effect                                                                                                                                                                                                                         |
+|-------------------+---------+----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| independent_runs  | integer |                         10 | number of independent runs to perform. Each run gets its own set of initial conditions.                                                                                                                                        |
+| target_partitions | integer |                          5 | Number of partitions to find per independent run.                                                                                                                                                                              |
+| discard_transient | integer |                          3 | Ignore this many partitions before tracking.                                                                                                                                                                                   |
+| target_clusters   | integer | dependent on size of graph | Expected number of clusters to find. Used for creating the initial conditions. The final partition is not constrained to having this many clusters.                                                                            |
+| subcluster        | integer |                          1 | Degree of subclustering. If greater than 1, each initial community is independently subclustered into a smaller set of communities. In turn those communities are further subclustered and so on ~subcluster~ number of times. |
+| minclust          | integer |                          5 | The minimum size of a cluster to consider for subclustering. If a cluster has fewer nodes than this, it will not be further subclustered.                                                                                      |
+| random_seed       | integer |         randomly generated | a random seed for reproducibility.                                                                                                                                                                                             |
+| max_threads       | integer |  value of ~independent_runs~  | number of threads to create. (Use 1 to prevent parallel processing.) A value less than the number of processing cores will limit the number of cores used.                                                                     |
+| verbose           | boolean |                      false | Whether to print extra information about the running process.                                                                                                                                                                  |
 
 Using the ~se2_options~ struct, options can be set, for example, by replacing the above line with:
 
