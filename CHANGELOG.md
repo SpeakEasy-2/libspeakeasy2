@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Compile only subset of igraph files.
 - Move from OpenMP -> pthreads. So CRAN will stop complaining.
+- Move `order_nodes` to seperate C file.
 
 ## [v0.1.4] 2024-06-04
 
