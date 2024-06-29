@@ -3,6 +3,6 @@
 
 #include <igraph_interface.h>
 
-void se2_reweight(igraph_t* graph, igraph_vector_t* weights);
+void se2_reweigh(igraph_t* graph, igraph_vector_t* weights);
 
 #endif

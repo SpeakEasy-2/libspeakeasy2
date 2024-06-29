@@ -1,5 +1,5 @@
 #include "se2_print.h"
-#include "se2_reweight_graph.h"
+#include "se2_reweigh_graph.h"
 
 #define ABS(a) (a) > 0 ? (a) : -(a);
 
@@ -87,7 +87,7 @@ static void se2_new_diagonal(igraph_t* graph, igraph_vector_t* weights,
   igraph_vector_init( &diagonal_weights, n_diagonal_edges);
 
   if (is_skewed) {
-    se2_puts("high skew to edge weight distribution; reweighting main diag");
+    se2_puts("high skew to edge weight distribution; reweighing main diag");
     se2_mean_link_weight(graph, weights, &diagonal_weights);
   } else {
     igraph_vector_fill( &diagonal_weights, 1);
@@ -141,7 +141,7 @@ static void se2_remove_diagonal(igraph_t* graph, igraph_vector_t* weights)
   igraph_eit_destroy( &eit);
 }
 
-static void se2_reweight_i(igraph_t* graph, igraph_vector_t* weights)
+static void se2_reweigh_i(igraph_t* graph, igraph_vector_t* weights)
 {
   if (!weights) {
     return;
@@ -180,11 +180,11 @@ static void se2_add_offset(igraph_t const* graph, igraph_vector_t* weights)
   }
 }
 
-void se2_reweight(igraph_t* graph, igraph_vector_t* weights)
+void se2_reweigh(igraph_t* graph, igraph_vector_t* weights)
 {
   igraph_bool_t is_skewed = skewness(graph, weights) >= 2;
 
-  se2_reweight_i(graph, weights);
+  se2_reweigh_i(graph, weights);
   se2_remove_diagonal(graph, weights);
   se2_new_diagonal(graph, weights, is_skewed);
 

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add explicit `void` in empty function prototype.
 - Fix two memory leaks. 1. letting igraph allocated rng objects get destroyed before their memory was freed 2. When creating a new label, it was possible the element one step out of an array's bound was being accessed.
+- Correct spelling of "reweigh".
 
 ### Changed
 

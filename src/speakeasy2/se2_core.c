@@ -12,7 +12,7 @@
 #include "se2_seeding.h"
 #include "se2_random.h"
 #include "se2_modes.h"
-#include "se2_reweight_graph.h"
+#include "se2_reweigh_graph.h"
 
 igraph_bool_t greeting_printed = false;
 
@@ -510,7 +510,7 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
 
   igraph_vector_int_t level_memb;
   igraph_vector_int_init( &level_memb, igraph_vcount(graph));
-  se2_reweight(graph, weights);
+  se2_reweigh(graph, weights);
   se2_bootstrap(graph, weights, 0, opts, &level_memb);
   igraph_matrix_int_set_row(memb, &level_memb, 0);
 
@@ -552,7 +552,7 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
         subgraph_weights_ptr = &subgraph_weights;
       }
 
-      se2_reweight( &subgraph, subgraph_weights_ptr);
+      se2_reweigh( &subgraph, subgraph_weights_ptr);
       se2_bootstrap( &subgraph, subgraph_weights_ptr, level, opts,
                      &subgraph_memb);
 
