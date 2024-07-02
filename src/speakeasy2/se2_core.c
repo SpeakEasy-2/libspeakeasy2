@@ -467,6 +467,18 @@ static void se2_relabel_hierarchical_communities(igraph_vector_int_t const*
   }
 }
 
+/**
+\brief speakeasy 2 community detection.
+
+\param graph the graph to cluster.
+\param weights optional weights if the graph is weighted, use NULL for
+  unweighted.
+\param opts a speakeasy options structure (see speak_easy_2.h).
+\param memb the resulting membership vector.
+
+\return Error code:
+         Always returns success.
+*/
 igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
                             se2_options* opts, igraph_matrix_int_t* memb)
 {

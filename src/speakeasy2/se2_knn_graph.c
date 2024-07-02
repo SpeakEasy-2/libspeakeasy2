@@ -100,7 +100,7 @@ static void se2_knn_fill_edges(igraph_vector_int_t* edges,
 
 /**
 \brief Create a directed graph with edges between the k nearest columns of
-a matrix. Compares columns using the inverse of euclidean distance.
+  a matrix. Compares columns using the inverse of euclidean distance.
 
 \param mat the matrix containing the columns to compare.
 \param k number of edges per column to make (must be >= 1 and < ncols - 1).

@@ -72,8 +72,22 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
   igraph_vector_int_destroy( &indices);
 }
 
-/* Return node indices of each cluster in order from largest-to-smallest
-   community. This can be used to display community structure in heat maps. */
+/**
+\brief Return node indices of each cluster in order from largest-to-smallest
+  community. This can be used to display community structure in heat maps. If
+  subclustering was performed, each row of \p ordering will be the ordering for
+  that level of clustering. To retain hiercharchical structure, nodes are
+  reordered only within the communities of the previous level.
+
+\param graph the graph the membership vector was created for.
+\param weights the weights of the graph if weighted, otherwise set to NULL.
+\param memb the membership vector.
+\param ordering the resulting node ordering. A list of indices mapping the ith
+  node of the graph to it's new order.
+
+\return Error code:
+         Always returns success.
+*/
 igraph_error_t se2_order_nodes(igraph_t const* graph,
                                igraph_vector_t const* weights,
                                igraph_matrix_int_t const* memb,
