@@ -28,4 +28,6 @@ igraph_error_t se2_order_nodes(igraph_t const* graph,
                                igraph_vector_t const* weights,
                                igraph_matrix_int_t const* memb,
                                igraph_matrix_int_t* ordering);
+igraph_error_t se2_knn_graph(igraph_matrix_t* mat, igraph_integer_t const k,
+                             igraph_t* res, igraph_vector_t* weights);
 #endif

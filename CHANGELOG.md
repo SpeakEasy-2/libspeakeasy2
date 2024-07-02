@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `se2_knn_graph` to create k-nearest neighbor graph from a matrix.
+
 ### Fixed
 
 - Add explicit `void` in empty function prototype.
