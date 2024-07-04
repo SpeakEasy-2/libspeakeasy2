@@ -1,5 +1,4 @@
-#include <igraph_structural.h>
-#include <igraph_random.h>
+#include <igraph.h>
 #include "se2_label.h"
 
 static inline void global_label_proportions(igraph_t const* graph,

@@ -5,8 +5,7 @@ add_library(SpeakEasy2
 
 target_link_libraries(SpeakEasy2 PUBLIC igraph)
 
-if (SE2_PARALLEL AND IGRAPH_THREAD_SAFE)
-  target_compile_definitions(SpeakEasy2 PRIVATE SE2PAR)
+if (SE2_PARALLEL)
   target_link_libraries(SpeakEasy2 PUBLIC Threads::Threads)
 endif ()
 

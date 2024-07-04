@@ -33,12 +33,42 @@ check_tls_support(TLS_KEYWORD)
 
 if(TLS_KEYWORD AND SE2_PARALLEL)
   message(STATUS "Compiling thread safe")
-  set(IGRAPH_THREAD_SAFE YES PARENT_SCOPE)
+  set(IGRAPH_THREAD_SAFE 1)
 else()
   message(STATUS "Not compiling thread safe")
-  set(IGRAPH_THREAD_SAFE NO PARENT_SCOPE)
+  set(HAVE__CONFIGTHREADLOCALE NO)
+  set(IGRAPH_THREAD_SAFE 0)
   set(TLS_KEYWORD "")
 endif()
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_threading.h.in
+  ${PROJECT_BINARY_DIR}/include/igraph_threading.h
+)
+
+if (NOT GIT_FOUND)
+  find_package(Git QUIET)
+endif()
+
+execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/igraph
+  OUTPUT_VARIABLE PACKAGE_VERSION
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+if ("${PACKAGE_VERSION}" STREQUAL "")
+  message(SEND_ERROR "Could not detect igraph version")
+endif()
+
+string(REGEX MATCH "([0-9]+)\.([0-9]+)\.([0-9]+)" IGRAPH_VERSION ${PACKAGE_VERSION})
+set(PACKAGE_VERSION_MAJOR ${CMAKE_MATCH_1})
+set(PACKAGE_VERSION_MINOR ${CMAKE_MATCH_2})
+set(PACKAGE_VERSION_PATCH ${CMAKE_MATCH_3})
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_version.h.in
+  ${PROJECT_BINARY_DIR}/include/igraph_version.h
+)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(IGRAPH_INTEGER_SIZE 64)

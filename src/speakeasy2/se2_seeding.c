@@ -1,6 +1,3 @@
-#include <igraph_error.h>
-#include <igraph_random.h>
-
 #include "se2_seeding.h"
 #include "se2_random.h"
 

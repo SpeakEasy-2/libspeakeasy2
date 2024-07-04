@@ -1,4 +1,3 @@
-#include <igraph_structural.h>
 #include <speak_easy_2.h>
 
 static void se2_order_nodes_i(igraph_matrix_int_t const* memb,

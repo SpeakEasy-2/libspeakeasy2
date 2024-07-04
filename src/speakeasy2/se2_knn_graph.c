@@ -1,5 +1,3 @@
-#include <igraph_interface.h>
-#include <igraph_constructors.h>
 #include <speak_easy_2.h>
 
 #include "se2_print.h"

@@ -1,8 +1,7 @@
 #ifndef SE2_MODES_H
 #define SE2_MODES_H
 
-#include <igraph_interface.h>
-#include "speak_easy_2.h"
+#include <speak_easy_2.h>
 #include "se2_partitions.h"
 
 typedef struct se2_tracker se2_tracker;

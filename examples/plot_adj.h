@@ -1,7 +1,6 @@
 #ifndef PLOT_ADJ_H
 #define PLOT_ADJ_H
 
-#include "igraph_interface.h"
 #include "speak_easy_2.h"
 
 #define COLOR_GREEN "\033[1;32m"

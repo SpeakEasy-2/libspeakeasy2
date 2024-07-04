@@ -1,8 +1,7 @@
 #ifndef SE2_PARTITIONS_H
 #define SE2_PARTITIONS_H
 
-#include <igraph_interface.h>
-#include <igraph_vector_list.h>
+#include <igraph.h>
 
 // LABEL(partition)[node_id] gets the reference label for the node.
 #define LABEL(partition) (VECTOR(*(partition).reference))

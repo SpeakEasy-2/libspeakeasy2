@@ -1,13 +1,17 @@
+#include <speak_easy_2.h>
+
+#ifdef SE2PAR
+#  undef SE2PAR
+#endif
+
+#if IGRAPH_THREAD_SAFE
+#   define SE2PAR
+#endif
+
 #ifdef SE2PAR
 #  include <pthread.h>
 #endif
 
-#include <igraph_error.h>
-#include <igraph_structural.h>
-#include <igraph_community.h>
-#include <igraph_constructors.h>
-
-#include <speak_easy_2.h>
 #include "se2_print.h"
 #include "se2_seeding.h"
 #include "se2_random.h"

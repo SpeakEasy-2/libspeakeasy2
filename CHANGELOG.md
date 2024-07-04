@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Return to including "igraph.h" instead of refined header files since igraph will expect this behavior in 1.0.0.
 - Compile only subset of igraph files.
 - Move from OpenMP -> pthreads. So CRAN will stop complaining.
 - Move `order_nodes` to seperate C file.

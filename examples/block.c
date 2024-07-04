@@ -1,5 +1,4 @@
-#include "igraph_games.h"
-#include "speak_easy_2.h"
+#include <speak_easy_2.h>
 #include "plot_adj.h"
 
 int main()
