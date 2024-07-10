@@ -60,7 +60,6 @@ static void se2_closest_k(igraph_integer_t const col,
 {
   igraph_vector_t similarities;
   igraph_integer_t n_cols = igraph_matrix_ncol(mat);
-  igraph_integer_t n_rows = igraph_matrix_nrow(mat);
 
   igraph_vector_init( &similarities, k);
 
