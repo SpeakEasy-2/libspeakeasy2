@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Memory error in `remove_diagonal`.
+
 ### Changed
 
-- Update igraph from 0.10.12 -> 0.10.13
+- Update igraph from 0.10.12 -> 0.10.13.
 
 ## [v0.1.5] 2024-07-23
 

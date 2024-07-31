@@ -10,8 +10,8 @@ static igraph_real_t skewness(igraph_t const* graph,
     return 0;
   }
 
-  igraph_integer_t n_edges = igraph_ecount(graph);
-  igraph_real_t avg = igraph_vector_sum(weights) / n_edges;
+  igraph_integer_t const n_edges = igraph_ecount(graph);
+  igraph_real_t const avg = igraph_vector_sum(weights) / n_edges;
   igraph_real_t numerator = 0;
   igraph_real_t denominator = 0;
   igraph_real_t value = 0;
@@ -103,8 +103,8 @@ static void se2_new_diagonal(igraph_t* graph, igraph_vector_t* weights,
 static void se2_remove_diagonal(igraph_t* graph, igraph_vector_t* weights)
 {
   igraph_eit_t eit;
-  igraph_integer_t n_nodes = igraph_vcount(graph);
-  igraph_integer_t n_edges = igraph_ecount(graph);
+  igraph_integer_t const n_nodes = igraph_vcount(graph);
+  igraph_integer_t const n_edges = igraph_ecount(graph);
   igraph_integer_t n_diagonal_edges = 0;
   igraph_vector_int_t diagonal_eids;
   igraph_es_t diagonal_es;
@@ -128,15 +128,18 @@ static void se2_remove_diagonal(igraph_t* graph, igraph_vector_t* weights)
     IGRAPH_EIT_NEXT(eit);
   }
 
-  if ((weights) && (n_diagonal_edges > 0)) {
-    igraph_vector_remove_section(weights, n_edges - n_diagonal_edges, n_edges);
+  if (n_diagonal_edges > 0) {
     igraph_vector_int_resize( &diagonal_eids, n_diagonal_edges);
-    igraph_es_vector( &diagonal_es, &diagonal_eids);
 
+    if (weights) {
+      igraph_vector_remove_section(weights, n_edges - n_diagonal_edges, n_edges);
+    }
+
+    igraph_es_vector( &diagonal_es, &diagonal_eids);
     igraph_delete_edges(graph, diagonal_es);
+    igraph_es_destroy( &diagonal_es);
   }
 
-  igraph_es_destroy( &diagonal_es);
   igraph_vector_int_destroy( &diagonal_eids);
   igraph_eit_destroy( &eit);
 }
