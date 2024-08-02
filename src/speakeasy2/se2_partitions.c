@@ -53,21 +53,15 @@ static igraph_integer_t se2_count_labels(igraph_vector_int_t* membership,
   return n_labels;
 }
 
-se2_partition* se2_partition_init(igraph_t const* graph,
-                                  igraph_vector_int_t* initial_labels)
+se2_partition* se2_partition_init(igraph_vector_int_t* initial_labels)
 {
   se2_partition* partition = malloc(sizeof(* partition));
-  igraph_integer_t n_nodes = igraph_vcount(graph);
+  igraph_integer_t const n_nodes = igraph_vector_int_size(initial_labels);
   igraph_vector_int_t* reference = malloc(sizeof(* reference));
   igraph_vector_int_t* stage = malloc(sizeof(* stage));
   igraph_vector_t* specificity = malloc(sizeof(* specificity));
   igraph_vector_int_t* community_sizes = malloc(sizeof(* community_sizes));
   igraph_integer_t n_labels = 0;
-
-  if (igraph_vector_int_size(initial_labels) != n_nodes) {
-    se2_printf("Membership vector size differs from number of vertices.");
-    return NULL;
-  }
 
   igraph_vector_int_init(reference, n_nodes);
   igraph_vector_int_init(stage, n_nodes);

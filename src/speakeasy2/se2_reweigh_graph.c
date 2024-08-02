@@ -18,29 +18,49 @@
 
 #include "se2_print.h"
 #include "se2_reweigh_graph.h"
+#include "se2_neighborlist.h"
 
 #define ABS(a) (a) > 0 ? (a) : -(a);
 
-static igraph_real_t skewness(igraph_t const* graph,
-                              igraph_vector_t const* weights)
+static igraph_real_t se2_weight_sum(igraph_vector_list_t const* weights)
+{
+  igraph_real_t ret = 0;
+  igraph_integer_t const n_nodes = igraph_vector_list_size(weights);
+  for (igraph_integer_t i = 0; i < n_nodes; i++) {
+    igraph_vector_t* nei_weights = igraph_vector_list_get_ptr(weights, i);
+    igraph_integer_t const n_neighs = igraph_vector_size(nei_weights);
+
+    for (igraph_integer_t j = 0; j < n_neighs; j++) {
+      ret += VECTOR(* nei_weights)[j];
+    }
+  }
+
+  return ret;
+}
+
+static igraph_real_t skewness(igraph_vector_int_list_t const* graph,
+                              igraph_vector_list_t const* weights)
 {
   if (!weights) {
     return 0;
   }
 
-  igraph_integer_t const n_edges = igraph_ecount(graph);
-  igraph_real_t const avg = igraph_vector_sum(weights) / n_edges;
+  igraph_integer_t const n_nodes = igraph_vector_list_size(weights);
+  igraph_integer_t const n_edges = se2_ecount(graph);
+  igraph_real_t const avg = se2_weight_sum(weights) / n_edges;
   igraph_real_t numerator = 0;
   igraph_real_t denominator = 0;
-  igraph_real_t value = 0;
-  igraph_real_t value_sq = 0;
   igraph_real_t skew = 0;
 
-  for (igraph_integer_t i = 0; i < n_edges; i++) {
-    value = VECTOR(* weights)[i] - avg;
-    value_sq = value* value;
-    denominator += value_sq;
-    numerator += value* value_sq;
+  for (igraph_integer_t i = 0; i < n_nodes; i++) {
+    igraph_vector_t* nei_weights = igraph_vector_list_get_ptr(weights, i);
+    igraph_integer_t const n_neighs = igraph_vector_size(nei_weights);
+    for (igraph_integer_t j = 0; j < n_neighs; j++) {
+      igraph_real_t value = VECTOR(* nei_weights)[j] - avg;
+      igraph_real_t value_sq = value* value;
+      denominator += value_sq;
+      numerator += value* value_sq;
+    }
   }
   denominator = sqrt((double)denominator);
   denominator = denominator* denominator* denominator;
@@ -51,25 +71,24 @@ static igraph_real_t skewness(igraph_t const* graph,
   return skew;
 }
 
-static void se2_mean_link_weight(igraph_t const* graph,
-                                 igraph_vector_t const* weights,
+static void se2_mean_link_weight(igraph_vector_int_list_t const* graph,
+                                 igraph_vector_list_t const* weights,
                                  igraph_vector_t* diagonal_weights)
 {
-  igraph_eit_t eit;
-  igraph_integer_t eid;
+  igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_vector_int_t signs;
 
-  igraph_vector_int_init( &signs, igraph_vector_size(diagonal_weights));
-  igraph_eit_create(graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
-  while (!IGRAPH_EIT_END(eit)) {
-    eid = IGRAPH_EIT_GET(eit);
-    VECTOR(* diagonal_weights)[IGRAPH_FROM(graph, eid)] += VECTOR(* weights)[eid];
-    VECTOR(signs)[IGRAPH_FROM(graph, eid)] +=
-      VECTOR(* weights)[eid] < 0 ? -1 : 1;
-    IGRAPH_EIT_NEXT(eit);
+  igraph_vector_int_init( &signs, n_nodes);
+  for (igraph_integer_t i = 0; i < n_nodes; i++) {
+    igraph_vector_int_t neighs = VECTOR(* graph)[i];
+    for (igraph_integer_t j = 0; j < igraph_vector_int_size( &neighs); j++) {
+      igraph_integer_t nei_id = VECTOR(neighs)[j];
+      VECTOR(* diagonal_weights)[nei_id] += LIST(* weights, i, nei_id);
+      VECTOR(signs)[nei_id] += LIST(* weights, i, nei_id) < 0 ? -1 : 1;
+    }
   }
 
-  for (igraph_integer_t i = 0; i < igraph_vector_size(diagonal_weights); i++) {
+  for (igraph_integer_t i = 0; i < n_nodes; i++) {
     if (VECTOR(signs)[i] == 0) {
       continue;
     }
@@ -78,31 +97,55 @@ static void se2_mean_link_weight(igraph_t const* graph,
   }
 
   igraph_vector_int_destroy( &signs);
-  igraph_eit_destroy( &eit);
 }
 
-static void se2_new_diagonal(igraph_t* graph, igraph_vector_t* weights,
-                             igraph_bool_t is_skewed)
+static void se2_weigh_diagonal(igraph_vector_int_list_t const* graph,
+                               igraph_vector_list_t const* weights,
+                               igraph_bool_t is_skewed)
 {
-  igraph_integer_t n_diagonal_edges = igraph_vcount(graph);
-  igraph_integer_t n_edges = igraph_ecount(graph);
+  igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_vector_int_t diagonal_edges;
-  igraph_vector_t diagonal_weights;
 
-  igraph_vector_int_init( &diagonal_edges, 2 * n_diagonal_edges);
-  for (igraph_integer_t i = 0; i < (2 * n_diagonal_edges); i += 2) {
-    VECTOR(diagonal_edges)[i] = i / 2;
-    VECTOR(diagonal_edges)[i + 1] = i / 2;
+  igraph_vector_int_init( &diagonal_edges, n_nodes);
+  for (igraph_integer_t i = 0; i < n_nodes; i++) {
+    igraph_bool_t found_edge = false;
+    igraph_vector_int_t* neighs = &VECTOR(* graph)[i];
+    for (igraph_integer_t j = 0; j < igraph_vector_int_size(neighs); j++) {
+      if (VECTOR(* neighs)[j] == i) {
+        if (found_edge) { // Already found a diagonal.
+          igraph_vector_int_remove(neighs, j);
+          if (weights) {
+            igraph_vector_remove( &VECTOR(* weights)[i], j);
+          }
+        } else {
+          found_edge = true;
+          VECTOR(diagonal_edges)[i] = j;
+          if (weights) {
+            /* Importantly set to 0 so diagonal weights don't impact
+            calculation of mean link weight if skewed. */
+            LIST(* weights, i, j) = 0;
+          }
+        }
+      }
+    }
+
+    if (!found_edge) {
+      igraph_vector_int_push_back(neighs, i);
+      VECTOR(diagonal_edges)[i] = igraph_vector_int_size(neighs) - 1;
+      if (weights) {
+        igraph_vector_t* w = &VECTOR(* weights)[i];
+        igraph_vector_resize(w, igraph_vector_size(w) + 1);
+        VECTOR(* w)[igraph_vector_size(w) - 1] = 0;
+      }
+    }
   }
-  igraph_add_edges(graph, &diagonal_edges, NULL);
-  igraph_vector_int_destroy( &diagonal_edges);
 
   if (!weights) {
-    return;
+    goto cleanup;
   }
 
-  igraph_vector_resize(weights, n_edges + n_diagonal_edges);
-  igraph_vector_init( &diagonal_weights, n_diagonal_edges);
+  igraph_vector_t diagonal_weights;
+  igraph_vector_init( &diagonal_weights, n_nodes);
 
   if (is_skewed) {
     se2_puts("high skew to edge weight distribution; reweighing main diag");
@@ -111,58 +154,18 @@ static void se2_new_diagonal(igraph_t* graph, igraph_vector_t* weights,
     igraph_vector_fill( &diagonal_weights, 1);
   }
 
-  for (igraph_integer_t i = 0; i < n_diagonal_edges; i++) {
-    VECTOR(* weights)[i + n_edges] = VECTOR(diagonal_weights)[i];
+  for (igraph_integer_t i = 0; i < n_nodes; i++) {
+    LIST(* weights, i, VECTOR(diagonal_edges)[i]) = VECTOR(diagonal_weights)[i];
   }
 
   igraph_vector_destroy( &diagonal_weights);
+
+cleanup:
+  igraph_vector_int_destroy( &diagonal_edges);
 }
 
-static void se2_remove_diagonal(igraph_t* graph, igraph_vector_t* weights)
-{
-  igraph_eit_t eit;
-  igraph_integer_t const n_nodes = igraph_vcount(graph);
-  igraph_integer_t const n_edges = igraph_ecount(graph);
-  igraph_integer_t n_diagonal_edges = 0;
-  igraph_vector_int_t diagonal_eids;
-  igraph_es_t diagonal_es;
-  igraph_integer_t eid;
-
-  igraph_vector_int_init( &diagonal_eids, n_nodes);
-  igraph_eit_create(graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
-
-  while (!(IGRAPH_EIT_END(eit))) {
-    eid = IGRAPH_EIT_GET(eit);
-
-    if ((n_diagonal_edges > 0) && weights) {
-      VECTOR(* weights)[eid - n_diagonal_edges] = VECTOR(* weights)[eid];
-    }
-
-    if (IGRAPH_FROM(graph, eid) == IGRAPH_TO(graph, eid)) {
-      VECTOR(diagonal_eids)[n_diagonal_edges] = eid;
-      n_diagonal_edges++;
-    }
-
-    IGRAPH_EIT_NEXT(eit);
-  }
-
-  if (n_diagonal_edges > 0) {
-    igraph_vector_int_resize( &diagonal_eids, n_diagonal_edges);
-
-    if (weights) {
-      igraph_vector_remove_section(weights, n_edges - n_diagonal_edges, n_edges);
-    }
-
-    igraph_es_vector( &diagonal_es, &diagonal_eids);
-    igraph_delete_edges(graph, diagonal_es);
-    igraph_es_destroy( &diagonal_es);
-  }
-
-  igraph_vector_int_destroy( &diagonal_eids);
-  igraph_eit_destroy( &eit);
-}
-
-static void se2_reweigh_i(igraph_t* graph, igraph_vector_t* weights)
+static void se2_reweigh_i(igraph_vector_int_list_t const* graph,
+                          igraph_vector_list_t const* weights)
 {
   if (!weights) {
     return;
@@ -170,46 +173,75 @@ static void se2_reweigh_i(igraph_t* graph, igraph_vector_t* weights)
 
   igraph_real_t max_magnitude_weight = 0;
   igraph_real_t current_magnitude = 0;
-  for (igraph_integer_t i = 0; i < igraph_ecount(graph); i++) {
-    current_magnitude = ABS(VECTOR(* weights)[i]);
-    if (current_magnitude > max_magnitude_weight) {
-      max_magnitude_weight = current_magnitude;
+  for (igraph_integer_t i = 0; i < se2_vcount(graph); i++) {
+    igraph_vector_t nei_weights = VECTOR(* weights)[i];
+    for (igraph_integer_t j = 0; j < igraph_vector_size( &nei_weights); j++) {
+      current_magnitude = ABS(VECTOR(nei_weights)[j]);
+      if (current_magnitude > max_magnitude_weight) {
+        max_magnitude_weight = current_magnitude;
+      }
     }
   }
 
-  for (igraph_integer_t i = 0; i < igraph_ecount(graph); i++) {
-    VECTOR(* weights)[i] /= max_magnitude_weight;
+  for (igraph_integer_t i = 0; i < se2_vcount(graph); i++) {
+    igraph_vector_t nei_weights = VECTOR(* weights)[i];
+    for (igraph_integer_t j = 0; j < igraph_vector_size( &nei_weights); j++) {
+      VECTOR(nei_weights)[j] /= max_magnitude_weight;
+    }
   }
 }
 
-static void se2_add_offset(igraph_t const* graph, igraph_vector_t* weights)
+static void se2_add_offset(igraph_vector_int_list_t const* graph,
+                           igraph_vector_list_t const* weights)
 {
-  igraph_integer_t n_nodes = igraph_vcount(graph);
-  igraph_integer_t n_edges = igraph_ecount(graph);
+  igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_real_t offset = 0;
 
   se2_puts("adding very small offset to all edges");
 
-  // Diagonal weights are the last n_node weights.
-  for (igraph_integer_t i = (n_edges - n_nodes); i < n_edges; i++) {
-    offset += VECTOR(* weights)[i];
+  for (igraph_integer_t i = 0; i < n_nodes; i++) {
+    igraph_vector_int_t neighs = VECTOR(* graph)[i];
+    for (igraph_integer_t j = 0; j < igraph_vector_int_size( &neighs); j++) {
+      if (VECTOR(neighs)[j] == i) {
+        offset += LIST(* weights, i, j);
+        break; // Already ensured there is only one self-loop per node.
+      }
+    }
   }
   offset /= n_nodes;
 
-  for (igraph_integer_t i = 0; i < n_edges; i++) {
-    VECTOR(* weights)[i] = ((1 - offset) * VECTOR(* weights)[i]) + offset;
+  for (igraph_integer_t i = 0; i < n_nodes; i++) {
+    igraph_vector_int_t neighs = VECTOR(* graph)[i];
+    for (igraph_integer_t j = 0; j < igraph_vector_int_size( &neighs); j++) {
+      LIST(* weights, i, j) = ((1 - offset) * LIST(* weights, i, j)) + offset;
+    }
   }
 }
 
-void se2_reweigh(igraph_t* graph, igraph_vector_t* weights)
+static igraph_bool_t se2_vector_list_has_negatives(igraph_vector_list_t const*
+    ls)
+{
+  for (igraph_integer_t i = 0; i < igraph_vector_list_size(ls); i++) {
+    igraph_vector_t vec = VECTOR(* ls)[i];
+    for (igraph_integer_t j = 0; j < igraph_vector_size( &vec); j++) {
+      if (VECTOR(vec)[j] < 0) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+void se2_reweigh(igraph_vector_int_list_t const* graph,
+                 igraph_vector_list_t const* weights)
 {
   igraph_bool_t is_skewed = skewness(graph, weights) >= 2;
 
   se2_reweigh_i(graph, weights);
-  se2_remove_diagonal(graph, weights);
-  se2_new_diagonal(graph, weights, is_skewed);
+  se2_weigh_diagonal(graph, weights, is_skewed);
 
-  if ((is_skewed) && (igraph_vector_min(weights) >= 0)) {
+  if ((is_skewed) && (!se2_vector_list_has_negatives(weights))) {
     se2_add_offset(graph, weights);
   }
 }

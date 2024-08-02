@@ -20,10 +20,15 @@ typedef struct {
   bool verbose; // Print information to stdout
 } se2_options;
 
-igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
+igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
+    igraph_vector_t const* weights, igraph_vector_int_list_t* neigh_list,
+    igraph_vector_list_t* weight_list);
+
+igraph_error_t speak_easy_2(igraph_vector_int_list_t const* graph,
+                            igraph_vector_list_t const* weights,
                             se2_options* opts, igraph_matrix_int_t* res);
-igraph_error_t se2_order_nodes(igraph_t const* graph,
-                               igraph_vector_t const* weights,
+igraph_error_t se2_order_nodes(igraph_vector_int_list_t const* graph,
+                               igraph_vector_list_t const* weights,
                                igraph_matrix_int_t const* memb,
                                igraph_matrix_int_t* ordering);
 igraph_error_t se2_knn_graph(igraph_matrix_t* mat, igraph_integer_t const k,

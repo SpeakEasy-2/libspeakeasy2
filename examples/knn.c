@@ -32,14 +32,21 @@ int main(int argc, char* argv[])
   se2_knn_graph( &mat, k, &g, &weights);
   igraph_matrix_destroy( &mat);
 
+  igraph_vector_int_list_t neigh_list;
+  igraph_vector_list_t weight_list;
+
+  se2_igraph_to_neighbor_list( &g, &weights, &neigh_list, &weight_list);
+  igraph_destroy( &g);
+  igraph_vector_destroy( &weights);
+
   se2_options opts = {
     .random_seed = 1234,
     .subcluster = 1, // No sub-clustering.
   };
 
-  speak_easy_2( &g, &weights, &opts, &membership);
+  speak_easy_2( &neigh_list, &weight_list, &opts, &membership);
   igraph_matrix_int_view_from_vector( &gt_membership, &ground_truth, 1);
-  se2_order_nodes( &g, &weights, &gt_membership, &ordering);
+  se2_order_nodes( &neigh_list, &weight_list, &gt_membership, &ordering);
   igraph_vector_int_destroy( &ground_truth);
 
   puts("Membership");
@@ -58,8 +65,8 @@ int main(int argc, char* argv[])
   igraph_vector_int_destroy( &level_ordering);
   igraph_matrix_int_destroy( &membership);
   igraph_matrix_int_destroy( &ordering);
-  igraph_vector_destroy( &weights);
-  igraph_destroy( &g);
+  igraph_vector_list_destroy( &weight_list);
+  igraph_vector_int_list_destroy( &neigh_list);
 
   return IGRAPH_SUCCESS;
 }

@@ -4,6 +4,8 @@
 int main()
 {
   igraph_t graph;
+  igraph_vector_int_list_t neigh_list;
+  /* igraph_integer_t n_nodes = 4000, n_types = 4; */
   igraph_integer_t n_nodes = 40, n_types = 4;
   igraph_real_t const mu = 0.25; // probability of between community edges.
   igraph_vector_t type_dist;
@@ -31,6 +33,8 @@ int main()
 
   igraph_matrix_destroy( &pref_mat);
 
+  se2_igraph_to_neighbor_list( &graph, NULL, &neigh_list, NULL);
+
   // Running SpeakEasy2
   se2_options opts = {
     .random_seed = 1234,
@@ -38,14 +42,14 @@ int main()
     .verbose = true,
   };
 
-  speak_easy_2( &graph, NULL, &opts, &membership);
+  speak_easy_2( &neigh_list, NULL, &opts, &membership);
 
   // Order nodes by ground truth community structure
   igraph_matrix_int_view_from_vector( &gt_membership, &ground_truth, 1);
-  se2_order_nodes( &graph, NULL, &gt_membership, &ordering);
+  se2_order_nodes( &neigh_list, NULL, &gt_membership, &ordering);
   igraph_vector_int_destroy( &ground_truth);
 
-  // Display results
+  /* // Display results */
   puts("Membership");
   print_matrix_int( &membership);
 
@@ -59,11 +63,12 @@ int main()
   igraph_matrix_int_get_row( &ordering, &level_ordering, 0);
   plot_edges( &graph, &level_membership, &level_ordering);
 
+  igraph_destroy( &graph);
   igraph_vector_int_destroy( &level_membership);
   igraph_vector_int_destroy( &level_ordering);
-  igraph_matrix_int_destroy( &membership);
   igraph_matrix_int_destroy( &ordering);
-  igraph_destroy( &graph);
+  igraph_matrix_int_destroy( &membership);
+  igraph_vector_int_list_destroy( &neigh_list);
 
   return IGRAPH_SUCCESS;
 }

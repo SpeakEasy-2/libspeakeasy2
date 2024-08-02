@@ -44,8 +44,7 @@ typedef struct se2_partition {
 
 typedef struct se2_iterator se2_iterator;
 
-se2_partition* se2_partition_init(igraph_t const* graph,
-                                  igraph_vector_int_t* initial_labels);
+se2_partition* se2_partition_init(igraph_vector_int_t* initial_labels);
 void se2_partition_destroy(se2_partition* partition);
 void se2_partition_store(se2_partition const* working_partition,
                          igraph_vector_int_list_t* partition_store,

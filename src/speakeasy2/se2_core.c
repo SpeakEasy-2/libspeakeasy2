@@ -31,6 +31,7 @@
 #endif
 
 #include "se2_print.h"
+#include "se2_neighborlist.h"
 #include "se2_seeding.h"
 #include "se2_random.h"
 #include "se2_modes.h"
@@ -41,20 +42,15 @@ igraph_bool_t greeting_printed = false;
 #define SE2_SET_OPTION(opts, field, default) \
     (opts->field) = (opts)->field ? (opts)->field : (default)
 
-static igraph_error_t se2_core(igraph_t const* graph,
-                               igraph_vector_t const* weights,
+static igraph_error_t se2_core(igraph_vector_int_list_t const* graph,
+                               igraph_vector_list_t const* weights,
                                igraph_vector_int_list_t* partition_list,
                                igraph_integer_t const partition_offset,
                                se2_options const* opts)
 {
-  igraph_error_t errorcode = IGRAPH_SUCCESS;
   se2_tracker* tracker = se2_tracker_init(opts);
-  igraph_vector_int_t* ic_store =
-    igraph_vector_int_list_get_ptr(partition_list, partition_offset);
-  se2_partition* working_partition = se2_partition_init(graph, ic_store);
-  if (!working_partition) {
-    IGRAPH_ERROR("Failed to generate partition.", IGRAPH_EINVAL);
-  }
+  igraph_vector_int_t* ic_store = &VECTOR(* partition_list)[partition_offset];
+  se2_partition* working_partition = se2_partition_init(ic_store);
 
   igraph_integer_t partition_idx = partition_offset;
   for (igraph_integer_t time = 0; !se2_do_terminate(tracker); time++) {
@@ -68,7 +64,7 @@ static igraph_error_t se2_core(igraph_t const* graph,
   se2_tracker_destroy(tracker);
   se2_partition_destroy(working_partition);
 
-  return errorcode;
+  return IGRAPH_SUCCESS;
 }
 
 struct represent_parameters {
@@ -169,10 +165,9 @@ static void se2_most_representative_partition(igraph_vector_int_list_t const
 struct bootstrap_params {
   igraph_integer_t tid;
   igraph_integer_t n_nodes;
-  igraph_t* graph;
-  igraph_vector_t* weights;
+  igraph_vector_int_list_t* graph;
+  igraph_vector_list_t* weights;
   igraph_integer_t subcluster_iter;
-  igraph_vector_t* kin;
   igraph_vector_int_list_t* partition_store;
   se2_options* opts;
 #ifdef SE2PAR
@@ -195,8 +190,7 @@ static void* se2_thread_bootstrap(void* parameters)
 
     igraph_rng_t rng, * old_rng;
     old_rng = se2_rng_init( &rng, run_i + p->opts->random_seed);
-    igraph_integer_t n_unique = se2_seeding(p->graph, p->weights, p->kin,
-                                            p->opts, &ic_store);
+    igraph_integer_t n_unique = se2_seeding(p->graph, p->opts, &ic_store);
     igraph_vector_int_list_set(p->partition_store, partition_offset, &ic_store);
 
     if ((p->opts->verbose) && (!p->subcluster_iter)) {
@@ -228,7 +222,8 @@ static void* se2_thread_bootstrap(void* parameters)
 #endif
     }
 
-    se2_core(p->graph, p->weights, p->partition_store, partition_offset, p->opts);
+    se2_core(p->graph, p->weights, p->partition_store, partition_offset,
+             p->opts);
 
     se2_rng_restore( &rng, old_rng);
   }
@@ -236,21 +231,16 @@ static void* se2_thread_bootstrap(void* parameters)
   return NULL;
 }
 
-static void se2_bootstrap(igraph_t* graph,
-                          igraph_vector_t const* weights,
+static void se2_bootstrap(igraph_vector_int_list_t const* graph,
+                          igraph_vector_list_t const* weights,
                           igraph_integer_t const subcluster_iter,
                           se2_options const* opts,
                           igraph_vector_int_t* memb)
 {
-  igraph_integer_t n_nodes = igraph_vcount(graph);
-  igraph_vector_t kin;
+  igraph_integer_t n_nodes = se2_vcount(graph);
   igraph_integer_t n_partitions = opts->target_partitions*
                                   opts->independent_runs;
   igraph_vector_int_list_t partition_store;
-
-  igraph_vector_init( &kin, n_nodes);
-  igraph_strength(graph, &kin, igraph_vss_all(), IGRAPH_IN, IGRAPH_LOOPS,
-                  weights);
 
   igraph_vector_int_list_init( &partition_store, n_partitions);
 
@@ -269,10 +259,9 @@ static void se2_bootstrap(igraph_t* graph,
   for (igraph_integer_t tid = 0; tid < opts->max_threads; tid++) {
     args[tid].tid = tid;
     args[tid].n_nodes = n_nodes;
-    args[tid].graph = graph;
-    args[tid].weights = (igraph_vector_t*)weights;
+    args[tid].graph = (igraph_vector_int_list_t*)graph;
+    args[tid].weights = (igraph_vector_list_t*)weights;
     args[tid].subcluster_iter = subcluster_iter;
-    args[tid].kin = &kin;
     args[tid].partition_store = &partition_store;
     args[tid].opts = (se2_options*)opts;
 #ifdef SE2PAR
@@ -306,13 +295,12 @@ static void se2_bootstrap(igraph_t* graph,
                                      memb, opts, subcluster_iter);
 
   igraph_vector_int_list_destroy( &partition_store);
-  igraph_vector_destroy( &kin);
 }
 
-static igraph_integer_t default_target_clusters(igraph_t const* graph)
+static igraph_integer_t default_target_clusters(igraph_vector_int_list_t
+    const* graph)
 {
-  igraph_integer_t n_nodes = igraph_vcount(graph);
-
+  igraph_integer_t const n_nodes = igraph_vector_int_list_size(graph);
   if (n_nodes < 10) {
     return n_nodes;
   }
@@ -333,7 +321,8 @@ static igraph_integer_t default_max_threads(igraph_integer_t const runs)
   return n_threads;
 }
 
-static void se2_set_defaults(igraph_t const* graph, se2_options* opts)
+static void se2_set_defaults(igraph_vector_int_list_t const* graph,
+                             se2_options* opts)
 {
   SE2_SET_OPTION(opts, independent_runs, 10);
   SE2_SET_OPTION(opts, subcluster, 1);
@@ -367,99 +356,43 @@ static void se2_collect_community_members(igraph_vector_int_t const* memb,
   }
 }
 
-static inline igraph_bool_t se2_edge_in_community(igraph_integer_t const
-    to, igraph_integer_t const from, igraph_vector_int_t const* members)
+static void se2_subgraph_from_community(
+  igraph_vector_int_list_t const* origin,
+  igraph_vector_list_t const* origin_weights,
+  igraph_vector_int_list_t* subgraph,
+  igraph_vector_list_t* sub_weights,
+  igraph_vector_int_t const* members)
 {
-  return igraph_vector_int_binsearch2(members, to) &&
-         igraph_vector_int_binsearch2(members, from);
-}
+  igraph_integer_t const n_membs = igraph_vector_int_size(members);
 
-/* Repack edges so node IDs are sequential. */
-static void se2_reindex_edges(igraph_vector_int_t* edges)
-{
-  igraph_vector_int_t ids;
-  igraph_integer_t const vmin = igraph_vector_int_min(edges);
-  igraph_integer_t const n_nodes = 1 + igraph_vector_int_max(edges) -
-                                   igraph_vector_int_min(edges);
-
-  igraph_vector_int_init( &ids, n_nodes);
-  for (igraph_integer_t i = 0; i < igraph_vector_int_size(edges); i++) {
-    VECTOR(ids)[VECTOR(* edges)[i] - vmin]++;
-  }
-
-  igraph_integer_t shift = 0;
-  for (igraph_integer_t i = 0; i < igraph_vector_int_size( &ids); i++) {
-    if (VECTOR(ids)[i] == 0) {
-      shift++;
-    } else {
-      VECTOR(ids)[i] = shift;
-    }
-  }
-
-  for (igraph_integer_t i = 0; i < igraph_vector_int_size(edges); i++) {
-    VECTOR(* edges)[i] -= VECTOR(ids)[VECTOR(* edges)[i] - vmin] + vmin;
-  }
-
-  igraph_vector_int_destroy( &ids);
-}
-
-static void se2_subgraph_from_community(igraph_t const* origin,
-                                        igraph_vector_t const* origin_weights,
-                                        igraph_t* subgraph,
-                                        igraph_vector_t* sub_weights,
-                                        igraph_vector_int_t const* members)
-{
-  igraph_real_t const density = (igraph_real_t)igraph_ecount(origin) /
-                                igraph_vcount(origin);
-  igraph_vector_int_t edges, edge_ids;
-  igraph_integer_t n_edges = ceil(density* igraph_vector_int_size(members));
-  igraph_eit_t eit;
-
-  igraph_vector_int_init( &edge_ids, n_edges);
-
-  igraph_eit_create(origin, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
-  igraph_integer_t edge_count = 0;
-  while (!IGRAPH_EIT_END(eit)) {
-    if (edge_count == n_edges) {
-      n_edges *= 2;
-      igraph_vector_int_resize( &edge_ids, n_edges);
-    }
-
-    igraph_integer_t eid = IGRAPH_EIT_GET(eit);
-    if (se2_edge_in_community(IGRAPH_TO(origin, eid), IGRAPH_FROM(origin, eid),
-                              members)) {
-      VECTOR(edge_ids)[edge_count] = eid;
-      edge_count++;
-    }
-
-    IGRAPH_EIT_NEXT(eit);
-  }
-  igraph_vector_int_resize( &edge_ids, edge_count);
-
+  igraph_vector_int_list_init(subgraph, n_membs);
   if (origin_weights) {
-    igraph_vector_init(sub_weights, edge_count);
-    for (igraph_integer_t i = 0; i < edge_count; i++) {
-      VECTOR(* sub_weights)[i] = VECTOR(* origin_weights)[VECTOR(edge_ids)[i]];
+    igraph_vector_list_init(sub_weights, n_membs);
+  }
+
+  for (igraph_integer_t i = 0; i < n_membs; i++) {
+    igraph_integer_t node_id = VECTOR(* members)[i];
+    igraph_vector_int_t* neighs = &VECTOR(* origin)[node_id];
+    igraph_vector_int_t* new_neighs = &VECTOR(* subgraph)[i];
+    igraph_integer_t const n_neighs = igraph_vector_int_size(neighs);
+
+    igraph_vector_int_resize(new_neighs, n_neighs);
+    if (origin_weights) {
+      igraph_vector_resize( &VECTOR(* sub_weights)[i], n_neighs);
     }
-  } else {
-    igraph_vector_init(sub_weights, 0);
+
+    igraph_integer_t count = 0;
+    igraph_integer_t pos;
+    for (igraph_integer_t j = 0; j < n_neighs; j++) {
+      if (igraph_vector_int_search(members, 0, VECTOR(* neighs)[j], &pos)) {
+        VECTOR(* new_neighs)[count] = pos;
+        if (origin_weights) {
+          LIST(* sub_weights, i, count) = LIST(* origin_weights, node_id, j);
+        }
+        count++;
+      }
+    }
   }
-
-  igraph_vector_int_init( &edges, edge_count * 2);
-  for (igraph_integer_t i = 0; i < edge_count; i++) {
-    igraph_integer_t to, from;
-    igraph_edge(origin, VECTOR(edge_ids)[i], &from, &to);
-    VECTOR(edges)[i * 2] = from;
-    VECTOR(edges)[1 + (i * 2)] = to;
-  }
-
-  se2_reindex_edges( &edges);
-  igraph_create(subgraph, &edges, igraph_vector_int_size(members),
-                igraph_is_directed(origin));
-
-  igraph_vector_int_destroy( &edge_ids);
-  igraph_vector_int_destroy( &edges);
-  igraph_eit_destroy( &eit);
 }
 
 /* For hierarchical clustering, each community from the previous level gets
@@ -501,7 +434,8 @@ static void se2_relabel_hierarchical_communities(igraph_vector_int_t const*
 \return Error code:
          Always returns success.
 */
-igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
+igraph_error_t speak_easy_2(igraph_vector_int_list_t const* graph,
+                            igraph_vector_list_t const* weights,
                             se2_options* opts, igraph_matrix_int_t* memb)
 {
   se2_set_defaults(graph, opts);
@@ -518,32 +452,36 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
   if (opts->verbose) {
     igraph_bool_t isweighted = false;
     if (weights) {
-      for (igraph_integer_t i = 0; i < igraph_ecount(graph); i++) {
-        if (VECTOR(* weights)[i] != 1) {
-          isweighted = true;
+      for (igraph_integer_t i = 0; i < igraph_vector_list_size(weights); i++) {
+        igraph_vector_t neigh_weights = VECTOR(* weights)[i];
+        for (igraph_integer_t j = 0; j < igraph_vector_size( &neigh_weights);
+             j++) {
+          if (VECTOR(neigh_weights)[j] != 1) {
+            isweighted = true;
+            break;
+          }
+        }
+
+        if (isweighted) {
           break;
         }
       }
     }
 
-    igraph_integer_t possible_edges = igraph_vcount(graph);
+    igraph_integer_t possible_edges = se2_vcount(graph);
     possible_edges *= possible_edges;
-    igraph_real_t edge_density = (igraph_real_t)igraph_ecount(graph) /
+    igraph_real_t edge_density = (igraph_real_t)se2_ecount(graph) /
                                  possible_edges;
-    igraph_bool_t directed = igraph_is_directed(graph);
-    edge_density *= (!directed + 1);
     se2_printf("Approximate edge density is %g.\n"
-               "Input type treated as %s.\n"
-               "Graph is %s.\n\n"
+               "Input type treated as %s.\n\n"
                "Calling main routine at level 1.\n",
-               edge_density, isweighted ? "weighted" : "unweighted",
-               directed ? "asymmetric" : "symmetric");
+               edge_density, isweighted ? "weighted" : "unweighted");
   }
 
-  igraph_matrix_int_init(memb, opts->subcluster, igraph_vcount(graph));
+  igraph_matrix_int_init(memb, opts->subcluster, se2_vcount(graph));
 
   igraph_vector_int_t level_memb;
-  igraph_vector_int_init( &level_memb, igraph_vcount(graph));
+  igraph_vector_int_init( &level_memb, se2_vcount(graph));
   se2_reweigh(graph, weights);
   se2_bootstrap(graph, weights, 0, opts, &level_memb);
   igraph_matrix_int_set_row(memb, &level_memb, 0);
@@ -573,22 +511,17 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
         continue;
       }
 
-      igraph_t subgraph;
-      igraph_vector_t subgraph_weights;
-      igraph_vector_t* subgraph_weights_ptr = NULL;
+      igraph_vector_int_list_t subgraph;
+      igraph_vector_list_t subgraph_weights;
       igraph_vector_int_t subgraph_memb;
 
       igraph_vector_int_init( &subgraph_memb, n_membs);
       se2_subgraph_from_community(graph, weights, &subgraph, &subgraph_weights,
                                   &member_ids);
 
-      if (igraph_vector_size( &subgraph_weights) > 0) {
-        subgraph_weights_ptr = &subgraph_weights;
-      }
-
-      se2_reweigh( &subgraph, subgraph_weights_ptr);
-      se2_bootstrap( &subgraph, subgraph_weights_ptr, level, opts,
-                     &subgraph_memb);
+      se2_reweigh( &subgraph, weights ? &subgraph_weights : NULL);
+      se2_bootstrap( &subgraph, weights ? &subgraph_weights : NULL, level,
+                     opts, &subgraph_memb);
 
       for (igraph_integer_t i = 0; i < igraph_vector_int_size( &subgraph_memb);
            i++) {
@@ -596,9 +529,11 @@ igraph_error_t speak_easy_2(igraph_t* graph, igraph_vector_t* weights,
       }
 
       igraph_vector_int_destroy( &member_ids);
-      igraph_vector_destroy( &subgraph_weights);
+      if (weights) {
+        igraph_vector_list_destroy( &subgraph_weights);
+      }
       igraph_vector_int_destroy( &subgraph_memb);
-      igraph_destroy( &subgraph);
+      igraph_vector_int_list_destroy( &subgraph);
     }
 
     se2_relabel_hierarchical_communities( &prev_memb, &level_memb);

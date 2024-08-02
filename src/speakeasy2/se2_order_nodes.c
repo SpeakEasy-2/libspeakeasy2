@@ -17,6 +17,7 @@
  */
 
 #include <speak_easy_2.h>
+#include "se2_neighborlist.h"
 
 static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
                               igraph_vector_int_t* initial,
@@ -105,8 +106,8 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
 \return Error code:
          Always returns success.
 */
-igraph_error_t se2_order_nodes(igraph_t const* graph,
-                               igraph_vector_t const* weights,
+igraph_error_t se2_order_nodes(igraph_vector_int_list_t const* graph,
+                               igraph_vector_list_t const* weights,
                                igraph_matrix_int_t const* memb,
                                igraph_matrix_int_t* ordering)
 {
@@ -114,8 +115,7 @@ igraph_error_t se2_order_nodes(igraph_t const* graph,
   igraph_vector_t degrees;
   igraph_vector_init( &degrees, n_nodes);
   igraph_matrix_int_init(ordering, igraph_matrix_int_nrow(memb), n_nodes);
-  igraph_strength(graph, &degrees, igraph_vss_all(), IGRAPH_ALL, IGRAPH_LOOPS,
-                  weights);
+  se2_strength(graph, weights, &degrees, IGRAPH_ALL);
 
   // Ensure nodes are ordered by highest-lowest degree within communities.
   igraph_vector_int_t init_ordering;

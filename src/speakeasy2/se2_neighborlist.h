@@ -16,13 +16,20 @@
  * with SpeakEasy 2. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef SE2_SEEDING_H
-#define SE2_SEEDING_H
+#ifndef SE2_NEIGHBORLIST_H
+#define SE2_NEIGHBORLIST_H
 
 #include <speak_easy_2.h>
 
-igraph_integer_t se2_seeding(igraph_vector_int_list_t const* graph,
-                             se2_options const* opts,
-                             igraph_vector_int_t* ic_store);
+/* Return the jth element of the ith list. */
+#define LIST(a, i, j) VECTOR(VECTOR((a))[(i)])[(j)]
+
+igraph_integer_t se2_vcount(igraph_vector_int_list_t const* neigh_list);
+igraph_integer_t se2_ecount(igraph_vector_int_list_t const* neigh_list);
+igraph_real_t se2_total_weight(igraph_vector_list_t const* weights);
+igraph_error_t se2_strength(igraph_vector_int_list_t const* neigh_list,
+                            igraph_vector_list_t const* weights,
+                            igraph_vector_t* degrees,
+                            igraph_neimode_t mode);
 
 #endif

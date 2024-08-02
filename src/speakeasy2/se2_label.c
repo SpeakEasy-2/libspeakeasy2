@@ -18,23 +18,23 @@
 
 #include <igraph.h>
 #include "se2_label.h"
+#include "se2_neighborlist.h"
 
-static inline void global_label_proportions(igraph_t const* graph,
-    igraph_vector_t const* weights, se2_partition const* partition,
-    igraph_vector_t* labels_heard, igraph_integer_t const n_labels)
+static inline void global_label_proportions(
+  igraph_vector_int_list_t const* graph,
+  igraph_vector_list_t const* weights, se2_partition const* partition,
+  igraph_vector_t* labels_heard, igraph_integer_t const n_labels)
 {
-  igraph_vector_t kout;
-  igraph_integer_t n_nodes = igraph_vcount(graph);
+  igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_integer_t acc = 0;
 
-  igraph_vector_init( &kout, n_nodes);
-  igraph_strength(graph, &kout, igraph_vss_all(), IGRAPH_OUT, IGRAPH_LOOPS,
-                  weights);
-
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
-    VECTOR(* labels_heard)[LABEL(* partition)[i]] += VECTOR(kout)[i];
+    igraph_vector_int_t* neighs = &VECTOR(* graph)[i];
+    for (igraph_integer_t j = 0; j < igraph_vector_int_size(neighs); j++) {
+      VECTOR(* labels_heard)[LABEL(* partition)[VECTOR(* neighs)[j]]] +=
+        weights ? LIST(* weights, i, j) : 1;
+    }
   }
-  igraph_vector_destroy( &kout);
 
   for (igraph_integer_t i = 0; i < n_labels; i++) {
     acc += VECTOR(* labels_heard)[i];
@@ -45,39 +45,20 @@ static inline void global_label_proportions(igraph_t const* graph,
   }
 }
 
-static inline igraph_real_t edge_get_weight(igraph_t const* graph,
-    igraph_vector_t const* weights, igraph_integer_t const from,
-    igraph_integer_t const to, igraph_bool_t const directed)
+static inline void local_label_proportions(
+  igraph_vector_int_list_t const* graph,
+  igraph_vector_list_t const* weights, se2_partition const* partition,
+  igraph_integer_t const node_id, igraph_vector_t* labels_heard,
+  igraph_real_t* kin, igraph_integer_t n_labels)
 {
-  if (!weights) {
-    return 1;
-  }
+  igraph_vector_int_t* neighbors = &VECTOR(* graph)[node_id];
+  igraph_integer_t n_neighbors = igraph_vector_int_size(neighbors);
 
-  igraph_integer_t eid;
-  igraph_get_eid(graph, &eid, from, to, directed, false);
-  return VECTOR(* weights)[eid];
-}
-
-static inline void local_label_proportions(igraph_t const* graph,
-    igraph_vector_t const* weights, se2_partition const* partition,
-    igraph_integer_t const node_id, igraph_vector_t* labels_heard,
-    igraph_real_t* kin, igraph_integer_t n_labels)
-{
-  igraph_vector_int_t neighbors;
-  igraph_integer_t n_neighbors;
-  igraph_integer_t neighbor;
-  igraph_real_t weight;
-  igraph_bool_t directed = igraph_is_directed(graph);
-
-  igraph_vector_int_init( &neighbors, 0);
-  igraph_neighbors(graph, &neighbors, node_id, IGRAPH_IN);
-  n_neighbors = igraph_vector_int_size( &neighbors);
   for (igraph_integer_t i = 0; i < n_neighbors; i++) {
-    neighbor = VECTOR(neighbors)[i];
-    weight = edge_get_weight(graph, weights, neighbor, node_id, directed);
+    igraph_integer_t const neighbor = VECTOR(* neighbors)[i];
+    igraph_real_t const weight = weights ? LIST(* weights, node_id, i) : 1;
     VECTOR(* labels_heard)[LABEL(* partition)[neighbor]] += weight;
   }
-  igraph_vector_int_destroy( &neighbors);
 
   *kin = 0;
   for (igraph_integer_t i = 0; i < n_labels; i++) {
@@ -88,10 +69,11 @@ static inline void local_label_proportions(igraph_t const* graph,
 /* Scores labels based on the difference between the local and global
  frequencies.  Labels that are overrepresented locally are likely to be of
  importance in tagging a node. */
-static void se2_find_most_specific_labels_i(igraph_t const* graph,
-    igraph_vector_t const* weights,
-    se2_partition* partition,
-    se2_iterator* node_iter)
+static void se2_find_most_specific_labels_i(
+  igraph_vector_int_list_t const* graph,
+  igraph_vector_list_t const* weights,
+  se2_partition* partition,
+  se2_iterator* node_iter)
 {
   igraph_integer_t max_label = se2_partition_max_label(partition);
   igraph_vector_t labels_expected;
@@ -134,8 +116,8 @@ static void se2_find_most_specific_labels_i(igraph_t const* graph,
   igraph_vector_destroy( &labels_observed);
 }
 
-void se2_find_most_specific_labels(igraph_t const* graph,
-                                   igraph_vector_t const* weights,
+void se2_find_most_specific_labels(igraph_vector_int_list_t const* graph,
+                                   igraph_vector_list_t const* weights,
                                    se2_partition* partition,
                                    igraph_real_t const fraction_nodes_to_label)
 {
@@ -145,13 +127,13 @@ void se2_find_most_specific_labels(igraph_t const* graph,
   se2_iterator_destroy(node_iter);
 }
 
-void se2_relabel_worst_nodes(igraph_t const* graph,
-                             igraph_vector_t const* weights,
+void se2_relabel_worst_nodes(igraph_vector_int_list_t const* graph,
+                             igraph_vector_list_t const* weights,
                              se2_partition* partition,
                              igraph_real_t const fraction_nodes_to_label)
 {
-  igraph_integer_t n_nodes = igraph_vcount(graph);
-  igraph_integer_t n_nodes_to_relabel = fraction_nodes_to_label* n_nodes;
+  igraph_integer_t const n_nodes = se2_vcount(graph);
+  igraph_integer_t const n_nodes_to_relabel = fraction_nodes_to_label* n_nodes;
   se2_iterator* node_iter = se2_iterator_k_worst_fit_nodes_init(partition,
                             n_nodes_to_relabel);
 
@@ -159,13 +141,12 @@ void se2_relabel_worst_nodes(igraph_t const* graph,
   se2_iterator_destroy(node_iter);
 }
 
-void se2_burst_large_communities(igraph_t const* graph,
-                                 se2_partition* partition,
+void se2_burst_large_communities(se2_partition* partition,
                                  igraph_real_t const fraction_nodes_to_move,
                                  igraph_integer_t const min_community_size)
 {
   se2_iterator* node_iter = se2_iterator_k_worst_fit_nodes_init(partition,
-                            igraph_vcount(graph) * fraction_nodes_to_move);
+                            partition->n_nodes* fraction_nodes_to_move);
   igraph_integer_t desired_community_size =
     se2_partition_median_community_size(partition);
   igraph_vector_int_t n_new_tags_cum;
@@ -237,40 +218,32 @@ modularity_change: a vector of how much the modularity would change if the
 corresponding merge_candidates were combined.
 
 modularity_change is capped to be always non-negative. */
-static void se2_best_merges(igraph_t const* graph,
-                            igraph_vector_t const* weights,
+static void se2_best_merges(igraph_vector_int_list_t const* graph,
+                            igraph_vector_list_t const* weights,
                             se2_partition const* partition,
                             igraph_vector_int_t* merge_candidates,
                             igraph_vector_t* modularity_change,
                             igraph_integer_t const n_labels)
 {
-  igraph_real_t total_weight;
-  igraph_eit_t eit;
+  igraph_real_t const total_weight = weights ? se2_total_weight(weights) :
+                                     se2_ecount(graph);
   igraph_matrix_t crosstalk;
   igraph_vector_t from_edge_probability;
   igraph_vector_t to_edge_probability;
 
-  igraph_eit_create(graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
   igraph_matrix_init( &crosstalk, n_labels, n_labels);
   igraph_vector_init( &from_edge_probability, n_labels);
   igraph_vector_init( &to_edge_probability, n_labels);
 
   igraph_vector_int_fill(merge_candidates, -1);
 
-  if (weights) {
-    total_weight = igraph_vector_sum(weights);
-  } else {
-    total_weight = igraph_ecount(graph);
-  }
-
-  igraph_integer_t eid;
-  while (!IGRAPH_EIT_END(eit)) {
-    eid = IGRAPH_EIT_GET(eit);
-    MATRIX(crosstalk,
-           LABEL(* partition)[IGRAPH_FROM(graph, eid)],
-           LABEL(* partition)[IGRAPH_TO(graph, eid)]) +=
-             weights ? VECTOR(* weights)[eid] : 1;
-    IGRAPH_EIT_NEXT(eit);
+  for (igraph_integer_t i = 0; i < se2_vcount(graph); i++) {
+    igraph_vector_int_t* neighs = &VECTOR(* graph)[i];
+    for (igraph_integer_t j = 0; j < igraph_vector_int_size(neighs); j++) {
+      MATRIX(crosstalk,
+             LABEL(* partition)[VECTOR(* neighs)[j]],
+             LABEL(* partition)[i]) += weights ? LIST(* weights, i, j) : 1;
+    }
   }
 
   for (igraph_integer_t i = 0; i < n_labels; i++) {
@@ -302,7 +275,6 @@ static void se2_best_merges(igraph_t const* graph,
     }
   }
 
-  igraph_eit_destroy( &eit);
   igraph_matrix_destroy( &crosstalk);
   igraph_vector_destroy( &from_edge_probability);
   igraph_vector_destroy( &to_edge_probability);
@@ -336,9 +308,10 @@ igraph_real_t se2_modularity_median(se2_partition* partition,
   return res;
 }
 
-igraph_bool_t se2_merge_well_connected_communities(igraph_t const* graph,
-    igraph_vector_t const* weights,
-    se2_partition* partition, igraph_real_t* max_prev_merge_threshold)
+igraph_bool_t se2_merge_well_connected_communities(
+  igraph_vector_int_list_t const* graph,
+  igraph_vector_list_t const* weights, se2_partition* partition,
+  igraph_real_t* max_prev_merge_threshold)
 {
   igraph_integer_t max_label = se2_partition_max_label(partition);
   igraph_vector_int_t merge_candidates;
