@@ -438,6 +438,8 @@ igraph_error_t speak_easy_2(igraph_vector_int_list_t const* graph,
                             igraph_vector_list_t const* weights,
                             se2_options* opts, igraph_matrix_int_t* memb)
 {
+  greeting_printed = false;
+
   se2_set_defaults(graph, opts);
 
 #ifndef SE2PAR
