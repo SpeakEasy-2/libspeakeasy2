@@ -20,7 +20,7 @@
 #include "se2_random.h"
 #include "se2_neighborlist.h"
 
-igraph_integer_t se2_seeding(igraph_vector_int_list_t const* graph,
+igraph_integer_t se2_seeding(se2_neighs const* graph,
                              se2_options const* opts,
                              igraph_vector_int_t* ic_store)
 {
@@ -49,7 +49,7 @@ igraph_integer_t se2_seeding(igraph_vector_int_list_t const* graph,
 
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
     // If node's only incoming edge is a self-loop.
-    if (igraph_vector_int_size( &VECTOR(* graph)[i]) == 1) {
+    if (N_NEIGHBORS(* graph, i) == 1) {
       VECTOR(* ic_store)[i] = ++biggest_label;
       n_unique++;
     }

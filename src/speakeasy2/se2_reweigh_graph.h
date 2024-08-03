@@ -19,9 +19,8 @@
 #ifndef SE2_REWEIGHT_GRAPH_H
 #define SE2_REWEIGHT_GRAPH_H
 
-#include <igraph.h>
+#include <speak_easy_2.h>
 
-void se2_reweigh(igraph_vector_int_list_t const* graph,
-                 igraph_vector_list_t const* weights);
+void se2_reweigh(se2_neighs const* graph);
 
 #endif

@@ -181,15 +181,14 @@ static void se2_post_step_hook(se2_tracker* tracker)
   }
 }
 
-static void se2_typical_mode(igraph_vector_int_list_t const* graph,
-                             igraph_vector_list_t const* weights,
+static void se2_typical_mode(se2_neighs const* graph,
                              se2_partition* partition)
 {
-  se2_find_most_specific_labels(graph, weights, partition,
+  se2_find_most_specific_labels(graph, partition,
                                 TYPICAL_FRACTION_NODES_TO_UPDATE);
 }
 
-static void se2_bubble_mode(igraph_vector_int_list_t const* graph,
+static void se2_bubble_mode(se2_neighs const* graph,
                             se2_partition* partition,
                             se2_tracker* tracker)
 {
@@ -198,27 +197,22 @@ static void se2_bubble_mode(igraph_vector_int_list_t const* graph,
   tracker->labels_after_last_bubbling = partition->n_labels;
 }
 
-static void se2_merge_mode(igraph_vector_int_list_t const* graph,
-                           igraph_vector_list_t const* weights,
+static void se2_merge_mode(se2_neighs const* graph,
                            se2_partition* partition,
                            se2_tracker* tracker)
 {
-  tracker->is_partition_stable = se2_merge_well_connected_communities(graph,
-                                 weights,
-                                 partition,
-                                 &(tracker->max_prev_merge_threshold));
+  tracker->is_partition_stable = se2_merge_well_connected_communities(
+                                   graph, partition,
+                                   &(tracker->max_prev_merge_threshold));
 }
 
-static void se2_nurture_mode(igraph_vector_int_list_t const* graph,
-                             igraph_vector_list_t const* weights,
+static void se2_nurture_mode(se2_neighs const* graph,
                              se2_partition* partition)
 {
-  se2_relabel_worst_nodes(graph, weights, partition,
-                          NURTURE_FRACTION_NODES_TO_UPDATE);
+  se2_relabel_worst_nodes(graph, partition, NURTURE_FRACTION_NODES_TO_UPDATE);
 }
 
-void se2_mode_run_step(igraph_vector_int_list_t const* graph,
-                       igraph_vector_list_t const* weights,
+void se2_mode_run_step(se2_neighs const* graph,
                        se2_partition* partition, se2_tracker* tracker,
                        igraph_integer_t const time)
 {
@@ -226,16 +220,16 @@ void se2_mode_run_step(igraph_vector_int_list_t const* graph,
 
   switch (tracker->mode) {
   case SE2_TYPICAL:
-    se2_typical_mode(graph, weights, partition);
+    se2_typical_mode(graph, partition);
     break;
   case SE2_BUBBLE:
     se2_bubble_mode(graph, partition, tracker);
     break;
   case SE2_MERGE:
-    se2_merge_mode(graph, weights, partition, tracker);
+    se2_merge_mode(graph, partition, tracker);
     break;
   case SE2_NURTURE:
-    se2_nurture_mode(graph, weights, partition);
+    se2_nurture_mode(graph, partition);
     break;
   case SE2_NUM_MODES:
     // Never occurs.

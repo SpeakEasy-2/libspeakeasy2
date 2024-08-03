@@ -22,14 +22,18 @@
 #include <speak_easy_2.h>
 
 /* Return the jth element of the ith list. */
-#define LIST(a, i, j) VECTOR(VECTOR((a))[(i)])[(j)]
+#define NEIGHBOR(a, i, j) (VECTOR(VECTOR(*(a).neigh_list)[(i)])[(j)])
+#define NEIGHBORS(a, i) (VECTOR(*(a).neigh_list)[(i)])
+#define WEIGHT(a, i, j) ((a).weights ? VECTOR(VECTOR(*(a).weights)[(i)])[(j)] : 1)
+#define WEIGHTS_IN(a, i) (VECTOR(*(a).weights)[(i)])
+#define N_NEIGHBORS(a, i) (VECTOR(*(a).sizes)[(i)])
+#define HASWEIGHTS(a) ((a).weights ? true : false)
 
-igraph_integer_t se2_vcount(igraph_vector_int_list_t const* neigh_list);
-igraph_integer_t se2_ecount(igraph_vector_int_list_t const* neigh_list);
-igraph_real_t se2_total_weight(igraph_vector_list_t const* weights);
-igraph_error_t se2_strength(igraph_vector_int_list_t const* neigh_list,
-                            igraph_vector_list_t const* weights,
+igraph_integer_t se2_vcount(se2_neighs const* graph);
+igraph_integer_t se2_ecount(se2_neighs const* graph);
+igraph_real_t se2_total_weight(se2_neighs const* graph);
+igraph_error_t se2_strength(se2_neighs const* neigh_list,
                             igraph_vector_t* degrees,
-                            igraph_neimode_t mode);
+                            igraph_neimode_t const mode);
 
 #endif

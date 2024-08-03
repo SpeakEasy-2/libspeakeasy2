@@ -21,7 +21,7 @@
 
 #include <speak_easy_2.h>
 
-igraph_integer_t se2_seeding(igraph_vector_int_list_t const* graph,
+igraph_integer_t se2_seeding(se2_neighs const* graph,
                              se2_options const* opts,
                              igraph_vector_int_t* ic_store);
 
