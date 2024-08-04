@@ -52,13 +52,14 @@ static igraph_real_t skewness(se2_neighs const* graph)
   return skew;
 }
 
-static void se2_mean_link_weight(se2_neighs const* graph,
-                                 igraph_vector_t* diagonal_weights)
+static igraph_error_t se2_mean_link_weight(se2_neighs const* graph,
+    igraph_vector_t* diagonal_weights)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_vector_int_t signs;
 
-  igraph_vector_int_init( &signs, n_nodes);
+  IGRAPH_CHECK(igraph_vector_int_init( &signs, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &signs);
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(* graph, i); j++) {
       igraph_integer_t nei_id = NEIGHBOR(* graph, i, j);
@@ -76,15 +77,19 @@ static void se2_mean_link_weight(se2_neighs const* graph,
   }
 
   igraph_vector_int_destroy( &signs);
+  IGRAPH_FINALLY_CLEAN(1);
+
+  return IGRAPH_SUCCESS;
 }
 
-static void se2_weigh_diagonal(se2_neighs const* graph,
-                               igraph_bool_t is_skewed)
+static igraph_error_t se2_weigh_diagonal(se2_neighs const* graph,
+    igraph_bool_t is_skewed)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_vector_int_t diagonal_edges;
 
-  igraph_vector_int_init( &diagonal_edges, n_nodes);
+  IGRAPH_CHECK(igraph_vector_int_init( &diagonal_edges, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &diagonal_edges);
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
     igraph_bool_t found_edge = false;
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(* graph, i); j++) {
@@ -124,11 +129,12 @@ static void se2_weigh_diagonal(se2_neighs const* graph,
   }
 
   igraph_vector_t diagonal_weights;
-  igraph_vector_init( &diagonal_weights, n_nodes);
+  IGRAPH_CHECK(igraph_vector_init( &diagonal_weights, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_destroy, &diagonal_weights);
 
   if (is_skewed) {
     se2_puts("high skew to edge weight distribution; reweighing main diag");
-    se2_mean_link_weight(graph, &diagonal_weights);
+    IGRAPH_CHECK(se2_mean_link_weight(graph, &diagonal_weights));
   } else {
     igraph_vector_fill( &diagonal_weights, 1);
   }
@@ -139,9 +145,13 @@ static void se2_weigh_diagonal(se2_neighs const* graph,
   }
 
   igraph_vector_destroy( &diagonal_weights);
+  IGRAPH_FINALLY_CLEAN(1);
 
 cleanup:
   igraph_vector_int_destroy( &diagonal_edges);
+  IGRAPH_FINALLY_CLEAN(1);
+
+  return IGRAPH_SUCCESS;
 }
 
 static void se2_reweigh_i(se2_neighs const* graph)
@@ -207,14 +217,16 @@ static igraph_bool_t se2_vector_list_has_negatives(se2_neighs const* graph)
   return false;
 }
 
-void se2_reweigh(se2_neighs const* graph)
+igraph_error_t se2_reweigh(se2_neighs const* graph)
 {
   igraph_bool_t is_skewed = skewness(graph) >= 2;
 
   se2_reweigh_i(graph);
-  se2_weigh_diagonal(graph, is_skewed);
+  IGRAPH_CHECK(se2_weigh_diagonal(graph, is_skewed));
 
   if ((is_skewed) && (!se2_vector_list_has_negatives(graph))) {
     se2_add_offset(graph);
   }
+
+  return IGRAPH_SUCCESS;
 }

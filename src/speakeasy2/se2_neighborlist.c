@@ -38,15 +38,21 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
     igraph_vector_t const* weights, se2_neighs* neigh_list)
 {
   igraph_integer_t const n_nodes = igraph_vcount(graph);
-  igraph_error_t errcode = IGRAPH_SUCCESS;
 
   neigh_list->neigh_list = malloc(sizeof(* neigh_list->neigh_list));
+  IGRAPH_FINALLY(free, neigh_list->neigh_list);
   neigh_list->weights = weights ? malloc(sizeof(* neigh_list->weights)) : NULL;
+  if (neigh_list->weights) {
+    IGRAPH_FINALLY(free, neigh_list->weights);
+  }
   neigh_list->sizes = malloc(sizeof(* neigh_list->sizes));
+  IGRAPH_FINALLY(free, neigh_list->sizes);
 
   neigh_list->n_nodes = n_nodes;
-  igraph_vector_int_init(neigh_list->sizes, n_nodes);
-  igraph_vector_int_list_init(neigh_list->neigh_list, n_nodes);
+  IGRAPH_CHECK(igraph_vector_int_init(neigh_list->sizes, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, neigh_list->sizes);
+  IGRAPH_CHECK(igraph_vector_int_list_init(neigh_list->neigh_list, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_int_list_destroy, neigh_list->neigh_list);
   for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
     igraph_vector_int_t* neighbors = &VECTOR(* neigh_list->neigh_list)[node_id];
     igraph_neighbors(graph, neighbors, node_id, IGRAPH_IN);
@@ -54,11 +60,12 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
   }
 
   if (!weights) {
-    return errcode;
+    goto cleanup;
   }
 
   igraph_bool_t const directed = igraph_is_directed(graph);
-  igraph_vector_list_init(neigh_list->weights, n_nodes);
+  IGRAPH_CHECK(igraph_vector_list_init(neigh_list->weights, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_list_destroy, neigh_list->weights);
   for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
     igraph_vector_int_t neighbors = VECTOR(* neigh_list->neigh_list)[node_id];
     igraph_integer_t const n_neighbors = igraph_vector_int_size( &neighbors);
@@ -71,8 +78,11 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
       VECTOR(* neigh_weights)[i] = VECTOR(* weights)[eid];
     }
   }
+  IGRAPH_FINALLY_CLEAN(2);
 
-  return errcode;
+cleanup:
+  IGRAPH_FINALLY_CLEAN(4);
+  return IGRAPH_SUCCESS;
 }
 
 void se2_neighs_destroy(se2_neighs* graph)

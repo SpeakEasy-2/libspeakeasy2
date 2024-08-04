@@ -21,6 +21,6 @@
 
 #include <speak_easy_2.h>
 
-void se2_reweigh(se2_neighs const* graph);
+igraph_error_t se2_reweigh(se2_neighs const* graph);
 
 #endif
