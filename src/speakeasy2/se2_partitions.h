@@ -23,7 +23,7 @@
 
 // LABEL(partition)[node_id] gets the reference label for the node.
 #define LABEL(partition) (VECTOR(*(partition).reference))
-#define RELABEL(partition) (VECTOR(*(partition).stage))
+#define STAGE(partition) (VECTOR(*(partition).stage))
 
 /* WARNING: Expose fields only so macros can be used for performance.  Ideally,
 treated as opaque.

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update igraph from 0.10.12 -> 0.10.13.
+- Optimized performance.
 
 ## [v0.1.5] 2024-07-23
 

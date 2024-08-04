@@ -69,7 +69,7 @@ static void local_label_proportions(
 /* Scores labels based on the difference between the local and global
  frequencies.  Labels that are overrepresented locally are likely to be of
  importance in tagging a node. */
-static void se2_find_most_specific_labels_i(se2_neighs const* graph,
+igraph_integer_t se2_find_most_specific_labels_i(se2_neighs const* graph,
     se2_partition* partition, se2_iterator* node_iter)
 {
   igraph_integer_t max_label = se2_partition_max_label(partition);
@@ -79,6 +79,7 @@ static void se2_find_most_specific_labels_i(se2_neighs const* graph,
   igraph_real_t node_kin = 0;
   igraph_real_t label_specificity = 0, best_label_specificity = 0;
   igraph_integer_t best_label = -1;
+  igraph_integer_t n_moved = 0;
 
   igraph_vector_init( &labels_expected, max_label + 1);
   igraph_vector_init( &labels_observed, max_label + 1);
@@ -100,6 +101,10 @@ static void se2_find_most_specific_labels_i(se2_neighs const* graph,
       }
     }
 
+    if (LABEL(* partition)[node_id] != best_label) {
+      n_moved++;
+    }
+
     se2_partition_add_to_stage(partition, node_id, best_label,
                                best_label_specificity);
     best_label = -1;
@@ -110,16 +115,22 @@ static void se2_find_most_specific_labels_i(se2_neighs const* graph,
   se2_iterator_destroy(label_iter);
   igraph_vector_destroy( &labels_expected);
   igraph_vector_destroy( &labels_observed);
+
+  return n_moved;
 }
 
-void se2_find_most_specific_labels(se2_neighs const* graph,
-                                   se2_partition* partition,
-                                   igraph_real_t const fraction_nodes_to_label)
+/* Return whether any nodes changed label. */
+igraph_bool_t se2_find_most_specific_labels(se2_neighs const* graph,
+    se2_partition* partition,
+    igraph_real_t const fraction_nodes_to_label)
 {
   se2_iterator* node_iter = se2_iterator_random_node_init(partition,
                             fraction_nodes_to_label);
-  se2_find_most_specific_labels_i(graph, partition, node_iter);
+  igraph_bool_t moved =
+    se2_find_most_specific_labels_i(graph, partition, node_iter) > 0;
   se2_iterator_destroy(node_iter);
+
+  return moved;
 }
 
 void se2_relabel_worst_nodes(se2_neighs const* graph,
@@ -189,7 +200,7 @@ void se2_burst_large_communities(se2_partition* partition,
     current_label = LABEL(* partition)[node_id];
     if (se2_partition_community_size(partition, current_label) >=
         min_community_size) {
-      RELABEL(* partition)[node_id] =
+      STAGE(* partition)[node_id] =
         VECTOR(new_tags)[RNG_INTEGER(VECTOR(n_new_tags_cum)[current_label],
                                      VECTOR(n_new_tags_cum)[current_label + 1] - 1)];
     }

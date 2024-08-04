@@ -41,6 +41,7 @@ struct se2_tracker {
   igraph_bool_t allowed_to_merge;
   igraph_real_t max_prev_merge_threshold;
   igraph_bool_t is_partition_stable;
+  igraph_bool_t has_partition_changed;
   igraph_bool_t bubbling_has_peaked;
   igraph_integer_t smallest_community_to_bubble;
   igraph_integer_t time_since_bubbling_peaked;
@@ -64,6 +65,7 @@ se2_tracker* se2_tracker_init(se2_options const* opts)
     .allowed_to_merge = false,
     .max_prev_merge_threshold = 0,
     .is_partition_stable = false,
+    .has_partition_changed = true,
     .bubbling_has_peaked = false,
     .smallest_community_to_bubble = opts->minclust,
     .time_since_bubbling_peaked = 0,
@@ -182,10 +184,17 @@ static void se2_post_step_hook(se2_tracker* tracker)
 }
 
 static void se2_typical_mode(se2_neighs const* graph,
-                             se2_partition* partition)
+                             se2_partition* partition,
+                             se2_tracker* tracker)
 {
-  se2_find_most_specific_labels(graph, partition,
-                                TYPICAL_FRACTION_NODES_TO_UPDATE);
+  if ((tracker->time_since_last[SE2_TYPICAL] == 1) &&
+      !tracker->has_partition_changed) {
+    return;
+  }
+
+  tracker->has_partition_changed =
+    se2_find_most_specific_labels(graph, partition,
+                                  TYPICAL_FRACTION_NODES_TO_UPDATE);
 }
 
 static void se2_bubble_mode(se2_neighs const* graph,
@@ -220,7 +229,7 @@ void se2_mode_run_step(se2_neighs const* graph,
 
   switch (tracker->mode) {
   case SE2_TYPICAL:
-    se2_typical_mode(graph, partition);
+    se2_typical_mode(graph, partition, tracker);
     break;
   case SE2_BUBBLE:
     se2_bubble_mode(graph, partition, tracker);

@@ -22,9 +22,9 @@
 #include <speak_easy_2.h>
 #include "se2_partitions.h"
 
-void se2_find_most_specific_labels(se2_neighs const* graph,
-                                   se2_partition* partition,
-                                   igraph_real_t const fraction_nodes_to_label);
+igraph_bool_t se2_find_most_specific_labels(se2_neighs const* graph,
+    se2_partition* partition,
+    igraph_real_t const fraction_nodes_to_label);
 
 void se2_relabel_worst_nodes(se2_neighs const* graph,
                              se2_partition* partition,
