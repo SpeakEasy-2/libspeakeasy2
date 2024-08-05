@@ -16,7 +16,6 @@
  * with SpeakEasy 2. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
 #include <speak_easy_2.h>
 #include "se2_neighborlist.h"
 
@@ -39,14 +38,18 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
 {
   igraph_integer_t const n_nodes = igraph_vcount(graph);
 
-  neigh_list->neigh_list = malloc(sizeof(* neigh_list->neigh_list));
-  IGRAPH_FINALLY(free, neigh_list->neigh_list);
-  neigh_list->weights = weights ? malloc(sizeof(* neigh_list->weights)) : NULL;
+  neigh_list->neigh_list = igraph_malloc(sizeof(* neigh_list->neigh_list));
+  IGRAPH_CHECK_OOM(neigh_list->neigh_list, "");
+  IGRAPH_FINALLY(igraph_free, neigh_list->neigh_list);
+  neigh_list->weights = weights ?
+                        igraph_malloc(sizeof(* neigh_list->weights)) : NULL;
   if (neigh_list->weights) {
-    IGRAPH_FINALLY(free, neigh_list->weights);
+    IGRAPH_CHECK_OOM(neigh_list->weights, "");
+    IGRAPH_FINALLY(igraph_free, neigh_list->weights);
   }
-  neigh_list->sizes = malloc(sizeof(* neigh_list->sizes));
-  IGRAPH_FINALLY(free, neigh_list->sizes);
+  neigh_list->sizes = igraph_malloc(sizeof(* neigh_list->sizes));
+  IGRAPH_CHECK_OOM(neigh_list->sizes, "");
+  IGRAPH_FINALLY(igraph_free, neigh_list->sizes);
 
   neigh_list->n_nodes = n_nodes;
   IGRAPH_CHECK(igraph_vector_int_init(neigh_list->sizes, n_nodes));
@@ -88,13 +91,13 @@ cleanup:
 void se2_neighs_destroy(se2_neighs* graph)
 {
   igraph_vector_int_list_destroy(graph->neigh_list);
-  free(graph->neigh_list);
+  igraph_free(graph->neigh_list);
   if (HASWEIGHTS(* graph)) {
     igraph_vector_list_destroy(graph->weights);
-    free(graph->weights);
+    igraph_free(graph->weights);
   }
   igraph_vector_int_destroy(graph->sizes);
-  free(graph->sizes);
+  igraph_free(graph->sizes);
 }
 
 /* Return the number of nodes in the graph represented by \p graph. */

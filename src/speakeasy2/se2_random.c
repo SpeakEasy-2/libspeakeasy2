@@ -17,13 +17,15 @@
  */
 
 #include "se2_random.h"
+#include "se2_error_handling.h"
 
 /* Initializes default igraph random number generator to use twister method */
 igraph_rng_t* se2_rng_init(igraph_rng_t* rng, const int seed)
 {
   igraph_rng_t* old_rng = igraph_rng_default();
 
-  igraph_rng_init(rng, &igraph_rngtype_mt19937);
+  SE2_THREAD_CHECK_RETURN(igraph_rng_init(rng, &igraph_rngtype_mt19937),
+                          old_rng);
   igraph_rng_set_default(rng);
   igraph_rng_seed(igraph_rng_default(), seed);
 

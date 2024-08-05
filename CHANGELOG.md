@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Error handling to allow graceful exit from threads if error occurs in any thread. This is primarily useful for high level interfaces as it should prevent crashing on error, allow memory cleanup on error, and make it easier to implement user interrupt.
+
 ### Fixed
 
 - Memory error in `remove_diagonal`.
