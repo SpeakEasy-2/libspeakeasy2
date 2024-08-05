@@ -526,9 +526,9 @@ igraph_error_t speak_easy_2(se2_neighs const* graph, se2_options* opts,
 
 #ifndef SE2PAR
   if (opts->max_threads > 1) {
-    se2_warn("SpeakEasy 2 was not compiled with thread support. "
-             "Ignoring `max_threads`.\n\n"
-             "To suppress this warning do not set `max_threads`\n.");
+    IGRAPH_WARNING("SpeakEasy 2 was not compiled with thread support. "
+                   "Ignoring `max_threads`.\n\n"
+                   "To suppress this warning do not set `max_threads`\n.");
     opts->max_threads = 1;
   }
 #endif

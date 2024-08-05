@@ -18,8 +18,6 @@
 
 #include <speak_easy_2.h>
 
-#include "se2_print.h"
-
 static void se2_insert_sim(igraph_real_t const s,
                            igraph_vector_t* similarities,
                            igraph_integer_t const col,
@@ -72,14 +70,16 @@ static igraph_real_t se2_euclidean_dist(igraph_integer_t const i,
   return sqrt(out);
 }
 
-static void se2_closest_k(igraph_integer_t const col,
-                          igraph_integer_t const k, igraph_matrix_t* const mat,
-                          igraph_vector_int_t* edges, igraph_vector_t* weights)
+static igraph_error_t se2_closest_k(
+  igraph_integer_t const col, igraph_integer_t const k,
+  igraph_matrix_t* const mat, igraph_vector_int_t* edges,
+  igraph_vector_t* weights)
 {
   igraph_vector_t similarities;
   igraph_integer_t n_cols = igraph_matrix_ncol(mat);
 
-  igraph_vector_init( &similarities, k);
+  IGRAPH_CHECK(igraph_vector_init( &similarities, k));
+  IGRAPH_FINALLY(igraph_vector_destroy, &similarities);
 
   for (igraph_integer_t i = 0; i < n_cols; i++) {
     if (i == col) {
@@ -100,6 +100,9 @@ static void se2_closest_k(igraph_integer_t const col,
   }
 
   igraph_vector_destroy( &similarities);
+  IGRAPH_FINALLY_CLEAN(1);
+
+  return IGRAPH_SUCCESS;
 }
 
 static void se2_knn_fill_edges(igraph_vector_int_t* edges,
@@ -133,36 +136,40 @@ igraph_error_t se2_knn_graph(igraph_matrix_t* const mat,
   igraph_integer_t const n_edges = k* n_cols;
   igraph_vector_int_t edges;
 
-  igraph_empty(res, n_cols, IGRAPH_DIRECTED);
+  IGRAPH_CHECK(igraph_empty(res, n_cols, IGRAPH_DIRECTED));
+  IGRAPH_FINALLY(igraph_destroy, res);
   if (weights) {
-    igraph_vector_init(weights, n_edges);
+    IGRAPH_CHECK(igraph_vector_init(weights, n_edges));
+    IGRAPH_FINALLY(igraph_vector_destroy, weights);
   }
 
-  igraph_vector_int_init( &edges, 2 * n_edges);
+  IGRAPH_CHECK(igraph_vector_int_init( &edges, 2 * n_edges));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &edges);
   se2_knn_fill_edges( &edges, k, n_cols);
 
   if (k < 1) {
-    se2_warn("The k must be at least 1 but got %"IGRAPH_PRId".\n", k);
-    return IGRAPH_EINVAL;
+    IGRAPH_ERRORF("The k must be at least 1 but got %"IGRAPH_PRId".\n",
+                  IGRAPH_EINVAL, k);
   }
 
   if (k >= (n_cols - 1)) {
-    se2_warn("The k must be less than the number of columns, "
-             "got k = %"IGRAPH_PRId" with only %"IGRAPH_PRId" columns.\n",
-             k, n_cols);
-    return IGRAPH_EINVAL;
+    IGRAPH_ERRORF("The k must be less than the number of columns, "
+                  "got k = %"IGRAPH_PRId" with only %"IGRAPH_PRId" columns.\n",
+                  IGRAPH_EINVAL, k, n_cols);
   }
 
   if (weights) {
-    igraph_vector_resize(weights, n_edges);
+    IGRAPH_CHECK(igraph_vector_resize(weights, n_edges));
   }
 
   for (igraph_integer_t i = 0; i < n_cols; i++) {
-    se2_closest_k(i, k, mat, &edges, weights);
+    IGRAPH_CHECK(se2_closest_k(i, k, mat, &edges, weights));
   }
 
-  igraph_add_edges(res, &edges, NULL);
+  IGRAPH_CHECK(igraph_add_edges(res, &edges, NULL));
   igraph_vector_int_destroy( &edges);
+
+  IGRAPH_FINALLY_CLEAN(3);
 
   return IGRAPH_SUCCESS;
 }

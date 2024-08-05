@@ -19,19 +19,19 @@
 #include <speak_easy_2.h>
 #include "se2_neighborlist.h"
 
-static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
-                              igraph_vector_int_t* initial,
-                              igraph_matrix_int_t* ordering,
-                              igraph_integer_t const level,
-                              igraph_integer_t const start,
-                              igraph_integer_t const len)
+static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const* memb,
+                                        igraph_vector_int_t* initial,
+                                        igraph_matrix_int_t* ordering,
+                                        igraph_integer_t const level,
+                                        igraph_integer_t const start,
+                                        igraph_integer_t const len)
 {
   if (len == 0) {
-    return;
+    return IGRAPH_SUCCESS;
   }
 
   if (level == igraph_matrix_int_nrow(memb)) {
-    return;
+    return IGRAPH_SUCCESS;
   }
 
   igraph_vector_int_t comm_sizes;
@@ -50,8 +50,11 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
   }
 
   igraph_integer_t const n_communities = comm_max - comm_min + 1;
-  igraph_vector_int_init( &comm_sizes, n_communities);
-  igraph_vector_int_init( &pos, n_communities);
+  IGRAPH_CHECK(igraph_vector_int_init( &comm_sizes, n_communities));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &comm_sizes);
+
+  IGRAPH_CHECK(igraph_vector_int_init( &pos, n_communities));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &pos);
 
   for (igraph_integer_t i = 0; i < len; i++) {
     VECTOR(comm_sizes)[MATRIX(* memb, level,
@@ -59,8 +62,10 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
   }
 
   igraph_vector_int_t indices;
-  igraph_vector_int_init( &indices, n_communities);
-  igraph_vector_int_qsort_ind( &comm_sizes, &indices, IGRAPH_DESCENDING);
+  IGRAPH_CHECK(igraph_vector_int_init( &indices, n_communities));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &indices);
+  IGRAPH_CHECK(igraph_vector_int_qsort_ind( &comm_sizes, &indices,
+               IGRAPH_DESCENDING));
 
   VECTOR(pos)[VECTOR(indices)[0]] = start;
   for (igraph_integer_t i = 1; i < n_communities; i++) {
@@ -74,7 +79,6 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
     MATRIX(* ordering, level, VECTOR(pos)[comm]) = VECTOR(* initial)[start + i];
     VECTOR(pos)[comm]++;
   }
-  igraph_vector_int_destroy( &pos);
 
   for (igraph_integer_t i = 0; i < len; i++) {
     VECTOR(* initial)[start + i] = MATRIX(* ordering, level, start + i);
@@ -86,8 +90,12 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
     se2_order_nodes_i(memb, initial, ordering, level + 1, comm_start, comm_len);
     comm_start += comm_len;
   }
-  igraph_vector_int_destroy( &comm_sizes);
   igraph_vector_int_destroy( &indices);
+  igraph_vector_int_destroy( &pos);
+  igraph_vector_int_destroy( &comm_sizes);
+  IGRAPH_FINALLY_CLEAN(3);
+
+  return IGRAPH_SUCCESS;
 }
 
 /**
@@ -103,8 +111,7 @@ static void se2_order_nodes_i(igraph_matrix_int_t const* memb,
 \param ordering the resulting node ordering. A list of indices mapping the ith
   node of the graph to it's new order.
 
-\return Error code:
-         Always returns success.
+\return Error code
 */
 igraph_error_t se2_order_nodes(se2_neighs const* graph,
                                igraph_matrix_int_t const* memb,
@@ -112,20 +119,29 @@ igraph_error_t se2_order_nodes(se2_neighs const* graph,
 {
   igraph_integer_t const n_nodes = igraph_matrix_int_ncol(memb);
   igraph_vector_t degrees;
-  igraph_vector_init( &degrees, n_nodes);
-  igraph_matrix_int_init(ordering, igraph_matrix_int_nrow(memb), n_nodes);
-  se2_strength(graph, &degrees, IGRAPH_ALL);
+
+  IGRAPH_CHECK(igraph_vector_init( &degrees, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_destroy, &degrees);
+
+  IGRAPH_CHECK(igraph_matrix_int_init(ordering, igraph_matrix_int_nrow(memb),
+                                      n_nodes));
+  IGRAPH_FINALLY(igraph_matrix_int_destroy, ordering);
+
+  IGRAPH_CHECK(se2_strength(graph, &degrees, IGRAPH_ALL));
 
   // Ensure nodes are ordered by highest-lowest degree within communities.
   igraph_vector_int_t init_ordering;
-  igraph_vector_int_init( &init_ordering, n_nodes);
+  IGRAPH_CHECK(igraph_vector_int_init( &init_ordering, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &init_ordering);
 
-  igraph_vector_qsort_ind( &degrees, &init_ordering, IGRAPH_DESCENDING);
-
-  igraph_vector_destroy( &degrees);
+  IGRAPH_CHECK(igraph_vector_qsort_ind( &degrees, &init_ordering,
+                                        IGRAPH_DESCENDING));
 
   se2_order_nodes_i(memb, &init_ordering, ordering, 0, 0, n_nodes);
+
   igraph_vector_int_destroy( &init_ordering);
+  igraph_vector_destroy( &degrees);
+  IGRAPH_FINALLY_CLEAN(3);
 
   return IGRAPH_SUCCESS;
 }
