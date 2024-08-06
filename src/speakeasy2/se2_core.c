@@ -31,7 +31,6 @@
 #endif
 
 #include "se2_error_handling.h"
-#include "se2_print.h"
 #include "se2_neighborlist.h"
 #include "se2_seeding.h"
 #include "se2_random.h"

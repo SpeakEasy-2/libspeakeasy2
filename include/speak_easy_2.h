@@ -2,6 +2,7 @@
 #define SPEAK_EASY_H
 
 #include <igraph.h>
+#include "../src/speakeasy2/se2_interface.h"
 
 typedef struct {
   igraph_integer_t independent_runs;  // Number of independent runs to perform.

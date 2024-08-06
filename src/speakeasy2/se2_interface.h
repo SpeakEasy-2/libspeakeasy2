@@ -16,20 +16,22 @@
  * with SpeakEasy 2. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef SE2_PRINT_H
-#define SE2_PRINT_H
+#ifndef SE2_INTERFACE_H
+#define SE2_INTERFACE_H
 
-#ifdef USING_R
-#  include <R_ext/Print.h>
+#include <igraph.h>
 
-#  define se2_printf Rprintf
-#  define se2_warn REprintf
-#  define se2_puts(...) se2_printf(__VA_ARGS__); se2_printf("\n")
+typedef int se2_int_printf_func_t(const char*, ...);
+typedef void se2_void_printf_func_t(const char*, ...);
+typedef igraph_bool_t se2_check_user_interrupt_func_t(void);
 
-#else
-#  define se2_printf printf
-#  define se2_warn(...) fprintf(stderr, __VA_ARGS__);
-#  define se2_puts puts
-#endif
+void se2_printf(const char*, ...);
+void se2_puts(const char*);
+igraph_bool_t se2_check_user_interrupt(void);
+
+/* Only set one, this corrects for R's printf not returning an int. */
+void se2_set_int_printf_func(se2_int_printf_func_t* func);
+void se2_set_void_printf_func(se2_void_printf_func_t* func);
+void se2_set_check_user_interrupt_func(se2_check_user_interrupt_func_t* func);
 
 #endif

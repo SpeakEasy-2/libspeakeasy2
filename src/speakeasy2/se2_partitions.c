@@ -16,7 +16,7 @@
  * with SpeakEasy 2. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "se2_print.h"
+#include "se2_interface.h"
 #include "se2_partitions.h"
 #include "se2_random.h"
 #include "se2_error_handling.h"
