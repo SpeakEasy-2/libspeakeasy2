@@ -580,6 +580,8 @@ igraph_error_t speak_easy_2(se2_neighs const* graph, se2_options* opts,
   }
 #endif
 
+  IGRAPH_CHECK(se2_reweigh(graph));
+
   if (opts->verbose) {
     igraph_bool_t isweighted = false;
     if (HASWEIGHTS(* graph)) {
@@ -615,7 +617,6 @@ igraph_error_t speak_easy_2(se2_neighs const* graph, se2_options* opts,
   IGRAPH_CHECK(igraph_vector_int_init( &level_memb, se2_vcount(graph)));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &level_memb);
 
-  IGRAPH_CHECK(se2_reweigh(graph));
   IGRAPH_CHECK(se2_bootstrap(graph, 0, opts, &level_memb));
   IGRAPH_CHECK(igraph_matrix_int_set_row(memb, &level_memb, 0));
 
