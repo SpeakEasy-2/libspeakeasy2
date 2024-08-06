@@ -17,6 +17,7 @@
  */
 
 #include <speak_easy_2.h>
+#include <unistd.h>
 
 #ifdef SE2PAR
 #  undef SE2PAR
@@ -39,6 +40,7 @@
 
 igraph_bool_t greeting_printed = false;
 igraph_error_t se2_thread_errorcode = IGRAPH_SUCCESS;
+pthread_mutex_t se2_error_mutex;
 
 #define SE2_SET_OPTION(opts, field, default) \
     (opts->field) = (opts)->field ? (opts)->field : (default)
@@ -62,6 +64,13 @@ static igraph_error_t se2_core(se2_neighs const* graph,
   for (igraph_integer_t time = 0; !se2_do_terminate( &tracker); time++) {
     SE2_THREAD_CHECK(se2_mode_run_step(graph, &working_partition, &tracker,
                                        time));
+#ifndef SE2PAR
+    if ((time % 32) == 0) {
+      if (se2_check_user_interrupt()) {
+        SE2_THREAD_CHECK(IGRAPH_INTERRUPTED);
+      }
+    }
+#endif
 
     if (se2_do_save_partition( &tracker)) {
       se2_partition_store( &working_partition, partition_list, partition_idx);
@@ -188,6 +197,7 @@ struct bootstrap_params {
   igraph_integer_t subcluster_iter;
   igraph_vector_int_list_t* partition_store;
   se2_options* opts;
+  igraph_bool_t* status;
 #ifdef SE2PAR
   pthread_mutex_t* print_mutex;
 #endif
@@ -251,19 +261,36 @@ static void* se2_thread_bootstrap(void* parameters)
     }
 
     SE2_THREAD_CHECK_RETURN(
-      se2_core(p->graph, p->partition_store, partition_offset, p->opts), NULL);
+      se2_core(p->graph, p->partition_store, partition_offset, p->opts),
+      NULL);
     se2_rng_restore( &rng, old_rng);
     IGRAPH_FINALLY_CLEAN(1);
   }
 
+  *p->status = true;
   return NULL;
 }
+
+#ifdef SE2PAR
+// Igraph's igraph_vector_bool_sum returns a boolean which isn't desired here.
+static igraph_integer_t se2_vector_bool_sum(igraph_vector_bool_t* vec)
+{
+  igraph_integer_t sum = 0;
+  for (igraph_integer_t i = 0; i < igraph_vector_bool_size(vec); i++) {
+    sum += VECTOR(* vec)[i];
+  }
+
+  return sum;
+}
+#endif
 
 static igraph_error_t se2_bootstrap(se2_neighs const* graph,
                                     igraph_integer_t const subcluster_iter,
                                     se2_options const* opts,
                                     igraph_vector_int_t* memb)
 {
+  se2_thread_errorcode = IGRAPH_SUCCESS;
+
   igraph_integer_t n_nodes = se2_vcount(graph);
   igraph_integer_t n_partitions = opts->target_partitions*
                                   opts->independent_runs;
@@ -275,6 +302,10 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
   if ((opts->verbose) && (!subcluster_iter) && (opts->multicommunity > 1)) {
     se2_puts("Attempting overlapping clustering.");
   }
+
+  igraph_vector_bool_t thread_status;
+  IGRAPH_CHECK(igraph_vector_bool_init( &thread_status, opts->max_threads));
+  IGRAPH_FINALLY(igraph_vector_bool_destroy, &thread_status);
 
 #ifdef SE2PAR
   pthread_t threads[opts->max_threads];
@@ -294,6 +325,7 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
     args[tid].subcluster_iter = subcluster_iter;
     args[tid].partition_store = &partition_store;
     args[tid].opts = (se2_options*)opts;
+    args[tid].status = &(VECTOR(thread_status)[tid]);
 #ifdef SE2PAR
     args[tid].print_mutex = &print_mutex;
 #endif
@@ -308,6 +340,20 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
   }
 
 #ifdef SE2PAR
+
+  struct timespec pause = {
+    .tv_sec = 0,
+    .tv_nsec = 20000000, // 20ms
+  };
+
+  // Perform user interrupt check on main thread.
+  while (se2_vector_bool_sum( &thread_status) != opts->max_threads) {
+    nanosleep( &pause, NULL);
+    if (se2_check_user_interrupt()) {
+      SE2_THREAD_CHECK(IGRAPH_INTERRUPTED);
+    }
+  }
+
   for (igraph_integer_t tid = 0; tid < opts->max_threads; tid++) {
     pthread_join(threads[tid], NULL);
   }
@@ -319,6 +365,9 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
   pthread_mutex_destroy( &se2_error_mutex);
   IGRAPH_FINALLY_CLEAN(2);
 #endif
+
+  igraph_vector_bool_destroy( &thread_status);
+  IGRAPH_FINALLY_CLEAN(1);
 
   if ((opts->verbose) && (!subcluster_iter)) {
     se2_printf("\nGenerated %"IGRAPH_PRId" partitions at level 1.\n",
@@ -519,7 +568,6 @@ igraph_error_t speak_easy_2(se2_neighs const* graph, se2_options* opts,
      for the duration of the session. If SE2 is called multiple times within a
      session, need to reset globals. */
   greeting_printed = false;
-  se2_thread_errorcode = IGRAPH_SUCCESS;
 
   se2_set_defaults(graph, opts);
 

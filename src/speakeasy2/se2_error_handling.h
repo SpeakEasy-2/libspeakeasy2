@@ -30,7 +30,7 @@
 extern igraph_error_t se2_thread_errorcode;
 
 #ifdef SE2PAR
-pthread_mutex_t se2_error_mutex;
+extern pthread_mutex_t se2_error_mutex;
 #endif
 
 /* Check if any thread has triggered an error. */

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Error handling to allow graceful exit from threads if error occurs in any thread. This is primarily useful for high level interfaces as it should prevent crashing on error, allow memory cleanup on error, and make it easier to implement user interrupt.
+- Ability to interrupt the process in high level interfaces.
 
 ### Fixed
 
