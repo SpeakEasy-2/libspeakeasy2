@@ -190,19 +190,61 @@ static igraph_error_t se2_most_representative_partition(
   return IGRAPH_SUCCESS;
 }
 
+enum bootstrap_status {
+  SE2_STATUS_WAITING = 0,
+  SE2_STATUS_STARTED, // Means needs to print info.
+  SE2_STATUS_RUNNING, // Means running but info has been printed.
+  SE2_STATUS_FINISHED
+};
+
 struct bootstrap_params {
   igraph_integer_t tid;
+  igraph_integer_t* run_i;
   igraph_integer_t n_nodes;
   se2_neighs* graph;
   igraph_integer_t subcluster_iter;
   igraph_vector_int_list_t* partition_store;
   se2_options* opts;
-  igraph_bool_t* status;
-#ifdef SE2PAR
-  pthread_mutex_t* print_mutex;
-#endif
+  igraph_integer_t* status;
+  igraph_integer_t* unique_labels;
   igraph_vector_int_t* memb;
+#ifdef SE2PAR
+  pthread_mutex_t* status_mutex;
+#endif
 };
+
+static void print_info(struct bootstrap_params* p)
+{
+  if ((p->opts->verbose) && (!p->subcluster_iter)) {
+    if (!greeting_printed) {
+      greeting_printed = true;
+      se2_printf("Completed generating initial labels.\n"
+                 "Produced %"IGRAPH_PRId" seed labels, "
+                 "while goal was %"IGRAPH_PRId".\n\n"
+                 "Starting level 1 clustering",
+                 *p->unique_labels, p->opts->target_clusters);
+
+      if (p->opts->max_threads > 1) {
+        se2_printf("; independent runs might not be displayed in order - "
+                   "that is okay...\n");
+      } else {
+        se2_printf("...\n");
+      }
+    }
+
+    se2_printf("Starting independent run #%"IGRAPH_PRId" of %"IGRAPH_PRId"\n",
+               *p->run_i + 1, p->opts->independent_runs);
+  }
+#ifdef SE2PAR
+  pthread_mutex_lock(p->status_mutex);
+#endif
+
+  *p->status = SE2_STATUS_RUNNING;
+
+#ifdef SE2PAR
+  pthread_mutex_unlock(p->status_mutex);
+#endif
+}
 
 static void* se2_thread_bootstrap(void* parameters)
 {
@@ -212,10 +254,10 @@ static void* se2_thread_bootstrap(void* parameters)
   igraph_integer_t const independent_runs = p->opts->independent_runs;
   for (igraph_integer_t run_i = p->tid; run_i < independent_runs;
        run_i += n_threads) {
+    *p->run_i = run_i;
     igraph_rng_t rng, * old_rng;
     igraph_integer_t partition_offset = run_i* p->opts->target_partitions;
     igraph_vector_int_t ic_store;
-    igraph_integer_t n_unique_labels;
 
     old_rng = se2_rng_init( &rng, run_i + p->opts->random_seed);
     IGRAPH_FINALLY(igraph_rng_destroy, &rng);
@@ -225,64 +267,53 @@ static void* se2_thread_bootstrap(void* parameters)
     IGRAPH_FINALLY(igraph_vector_int_destroy, &ic_store);
 
     SE2_THREAD_CHECK_RETURN(
-      se2_seeding(p->graph, p->opts, &ic_store, &n_unique_labels), NULL);
+      se2_seeding(p->graph, p->opts, &ic_store, p->unique_labels), NULL);
     igraph_vector_int_list_set(p->partition_store, partition_offset, &ic_store);
     IGRAPH_FINALLY_CLEAN(1);
-
-    if ((p->opts->verbose) && (!p->subcluster_iter)) {
 #ifdef SE2PAR
-      pthread_mutex_lock(p->print_mutex);
-      IGRAPH_FINALLY(pthread_mutex_unlock, p->print_mutex);
+    pthread_mutex_lock(p->status_mutex);
 #endif
 
-      if (!greeting_printed) {
-        greeting_printed = true;
-        se2_printf("Completed generating initial labels.\n"
-                   "Produced %"IGRAPH_PRId" seed labels, "
-                   "while goal was %"IGRAPH_PRId".\n\n"
-                   "Starting level 1 clustering",
-                   n_unique_labels, p->opts->target_clusters);
-
-        if (p->opts->max_threads > 1) {
-          se2_printf("; independent runs might not be displayed in order - "
-                     "that is okay...\n");
-        } else {
-          se2_printf("...\n");
-        }
-      }
-
-      se2_printf("Starting independent run #%"IGRAPH_PRId" of %"IGRAPH_PRId"\n",
-                 run_i + 1, p->opts->independent_runs);
+    *p->status = SE2_STATUS_STARTED;
 
 #ifdef SE2PAR
-      pthread_mutex_unlock(p->print_mutex);
-      IGRAPH_FINALLY_CLEAN(1);
+    pthread_mutex_unlock(p->status_mutex);
 #endif
-    }
+
+#ifndef SE2PAR
+    print_info(p);
+#endif
 
     SE2_THREAD_CHECK_RETURN(
       se2_core(p->graph, p->partition_store, partition_offset, p->opts),
       NULL);
     se2_rng_restore( &rng, old_rng);
     IGRAPH_FINALLY_CLEAN(1);
-  }
-
-  *p->status = true;
-  return NULL;
-}
 
 #ifdef SE2PAR
-// Igraph's igraph_vector_bool_sum returns a boolean which isn't desired here.
-static igraph_integer_t se2_vector_bool_sum(igraph_vector_bool_t* vec)
-{
-  igraph_integer_t sum = 0;
-  for (igraph_integer_t i = 0; i < igraph_vector_bool_size(vec); i++) {
-    sum += VECTOR(* vec)[i];
+    struct timespec pause = {
+      .tv_sec = 0,
+      .tv_nsec = 5000000, // 5ms
+    };
+    // Wait for print.
+    while ((p->opts->verbose) && (* p->status == SE2_STATUS_STARTED)) {
+      nanosleep( &pause, NULL);
+    }
+#endif
   }
 
-  return sum;
-}
+#ifdef SE2PAR
+  pthread_mutex_lock(p->status_mutex);
 #endif
+
+  *p->status = SE2_STATUS_FINISHED;
+
+#ifdef SE2PAR
+  pthread_mutex_unlock(p->status_mutex);
+#endif
+
+  return NULL;
+}
 
 static igraph_error_t se2_bootstrap(se2_neighs const* graph,
                                     igraph_integer_t const subcluster_iter,
@@ -303,15 +334,27 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
     se2_puts("Attempting overlapping clustering.");
   }
 
-  igraph_vector_bool_t thread_status;
-  IGRAPH_CHECK(igraph_vector_bool_init( &thread_status, opts->max_threads));
-  IGRAPH_FINALLY(igraph_vector_bool_destroy, &thread_status);
+  igraph_vector_int_t thread_run;
+  igraph_vector_int_t thread_status;
+  igraph_vector_int_t unique_labels;
+
+  IGRAPH_CHECK(igraph_vector_int_init( &thread_run, opts->max_threads));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &thread_run);
+
+  IGRAPH_CHECK(igraph_vector_int_init( &thread_status, opts->max_threads));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &thread_status);
+
+  IGRAPH_CHECK(igraph_vector_int_init( &unique_labels, opts->max_threads));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &unique_labels);
 
 #ifdef SE2PAR
   pthread_t threads[opts->max_threads];
-  pthread_mutex_t print_mutex;
-  pthread_mutex_init( &print_mutex, NULL);
-  IGRAPH_FINALLY(pthread_mutex_destroy, &print_mutex);
+  pthread_mutex_t status_mutex[opts->max_threads];
+  for (igraph_integer_t i = 0; i < opts->max_threads; i++) {
+    pthread_mutex_init(status_mutex + i, NULL);
+    IGRAPH_FINALLY(pthread_mutex_destroy, status_mutex + i);
+  }
+
   pthread_mutex_init( &se2_error_mutex, NULL);
   IGRAPH_FINALLY(pthread_mutex_destroy, &se2_error_mutex);
 #endif
@@ -325,9 +368,11 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
     args[tid].subcluster_iter = subcluster_iter;
     args[tid].partition_store = &partition_store;
     args[tid].opts = (se2_options*)opts;
+    args[tid].run_i = &(VECTOR(thread_run)[tid]);
     args[tid].status = &(VECTOR(thread_status)[tid]);
+    args[tid].unique_labels = &(VECTOR(unique_labels)[tid]);
 #ifdef SE2PAR
-    args[tid].print_mutex = &print_mutex;
+    args[tid].status_mutex = &status_mutex[tid];
 #endif
     args[tid].memb = memb;
 
@@ -347,8 +392,16 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
   };
 
   // Perform user interrupt check on main thread.
-  while (se2_vector_bool_sum( &thread_status) != opts->max_threads) {
+  while (igraph_vector_int_sum( &thread_status) !=
+         (SE2_STATUS_FINISHED* opts->max_threads)) {
     nanosleep( &pause, NULL);
+
+    for (igraph_integer_t i = 0; i < opts->max_threads; i++) {
+      if (VECTOR(thread_status)[i] == SE2_STATUS_STARTED) {
+        print_info( &args[i]);
+      }
+    }
+
     if (se2_check_user_interrupt()) {
       SE2_THREAD_CHECK(IGRAPH_INTERRUPTED);
     }
@@ -361,13 +414,19 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
     IGRAPH_ERROR("", se2_thread_errorcode);
   };
 
-  pthread_mutex_destroy( &print_mutex);
+  for (igraph_integer_t i = 0; i < opts->max_threads; i++) {
+    pthread_mutex_destroy(status_mutex + i);
+    IGRAPH_FINALLY_CLEAN(1);
+  }
+
   pthread_mutex_destroy( &se2_error_mutex);
-  IGRAPH_FINALLY_CLEAN(2);
+  IGRAPH_FINALLY_CLEAN(1);
 #endif
 
-  igraph_vector_bool_destroy( &thread_status);
-  IGRAPH_FINALLY_CLEAN(1);
+  igraph_vector_int_destroy( &thread_run);
+  igraph_vector_int_destroy( &thread_status);
+  igraph_vector_int_destroy( &unique_labels);
+  IGRAPH_FINALLY_CLEAN(3);
 
   if ((opts->verbose) && (!subcluster_iter)) {
     se2_printf("\nGenerated %"IGRAPH_PRId" partitions at level 1.\n",

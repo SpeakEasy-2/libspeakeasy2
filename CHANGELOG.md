@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Memory error in `remove_diagonal`.
+- Move any function that can be supplied by a high level language outside of threaded code.
 
 ### Changed
 
