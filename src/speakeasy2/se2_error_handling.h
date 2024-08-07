@@ -53,6 +53,7 @@ extern pthread_mutex_t se2_error_mutex;
       pthread_mutex_lock(&se2_error_mutex);         \
       se2_thread_errorcode = se2_rs;                \
       pthread_mutex_unlock(&se2_error_mutex);       \
+      IGRAPH_FINALLY_FREE();                        \
       return se2_rs;                                \
     }                                               \
   } while (0)
@@ -71,16 +72,19 @@ extern pthread_mutex_t se2_error_mutex;
       pthread_mutex_lock(&se2_error_mutex);          \
       se2_thread_errorcode = se2_rs;                 \
       pthread_mutex_unlock(&se2_error_mutex);        \
+      IGRAPH_FINALLY_FREE();                         \
       return (ret);                                  \
     }                                                \
   } while (0)
 
 #  define SE2_THREAD_CHECK_OOM(ptr)           \
   do {                                        \
+    SE2_THREAD_STATUS();                      \
     if ((ptr) == NULL) {                      \
       pthread_mutex_lock(&se2_error_mutex);   \
       se2_thread_errorcode = IGRAPH_ENOMEM;   \
       pthread_mutex_unlock(&se2_error_mutex); \
+      IGRAPH_FINALLY_FREE();                  \
       return IGRAPH_ENOMEM;                   \
     }                                         \
   } while (0)
@@ -91,6 +95,7 @@ extern pthread_mutex_t se2_error_mutex;
   do {                                               \
     igraph_error_t se2_rs = (expr);                  \
     if (IGRAPH_UNLIKELY(se2_rs != IGRAPH_SUCCESS)) { \
+      se2_thread_errorcode = se2_rs;                 \
       IGRAPH_ERROR_NO_RETURN("", se2_rs);            \
       return (ret);                                  \
     }                                                \

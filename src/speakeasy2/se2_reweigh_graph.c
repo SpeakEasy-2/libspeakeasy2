@@ -114,11 +114,11 @@ static igraph_error_t se2_weigh_diagonal(se2_neighs const* graph,
     }
 
     if (!found_edge) {
-      igraph_vector_int_push_back( &NEIGHBORS(* graph, i), i);
+      IGRAPH_CHECK(igraph_vector_int_push_back( &NEIGHBORS(* graph, i), i));
       VECTOR(diagonal_edges)[i] = N_NEIGHBORS(* graph, i)++;
       if (HASWEIGHTS(* graph)) {
         igraph_vector_t* w = &WEIGHTS_IN(* graph, i);
-        igraph_vector_resize(w, N_NEIGHBORS(* graph, i));
+        IGRAPH_CHECK(igraph_vector_resize(w, N_NEIGHBORS(* graph, i)));
         VECTOR(* w)[igraph_vector_size(w) - 1] = 0;
       }
     }
@@ -164,6 +164,10 @@ static void se2_reweigh_i(se2_neighs const* graph)
   igraph_real_t current_magnitude = 0;
   for (igraph_integer_t i = 0; i < se2_vcount(graph); i++) {
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(* graph, i); j++) {
+      if (NEIGHBOR(* graph, i, j) == i) {
+        continue;
+      }
+
       current_magnitude = ABS(WEIGHT(* graph, i, j));
       if (current_magnitude > max_magnitude_weight) {
         max_magnitude_weight = current_magnitude;
