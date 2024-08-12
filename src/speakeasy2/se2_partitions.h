@@ -19,7 +19,7 @@
 #ifndef SE2_PARTITIONS_H
 #define SE2_PARTITIONS_H
 
-#include <igraph.h>
+#include <speak_easy_2.h>
 
 // LABEL(partition)[node_id] gets the reference label for the node.
 #define LABEL(partition) (VECTOR(*(partition).reference))
@@ -31,7 +31,7 @@ treated as opaque.
 Basic idea is there is a reference membership vector, which stores the labels
 of nodes from before the current time step, and a stage membership vector,
 where proposed labels are set. At the end of a time step, the staged changes
-are committed to the reference membership vectore. */
+are committed to the reference membership vector. */
 typedef struct {
   igraph_vector_int_t* stage;           // Working membership
   igraph_vector_int_t* reference;       // Fixed previous membership
@@ -40,6 +40,8 @@ typedef struct {
   igraph_integer_t n_labels;
   igraph_vector_int_t* community_sizes;
   igraph_integer_t max_label;
+  igraph_matrix_t* local_labels_heard;
+  igraph_vector_t* global_labels_heard;
 } se2_partition;
 
 typedef struct {
@@ -51,7 +53,8 @@ typedef struct {
 } se2_iterator;
 
 igraph_error_t se2_partition_init(se2_partition* partition,
-                                  igraph_vector_int_t* initial_labels);
+                                  se2_neighs const* graph,
+                                  igraph_vector_int_t const* initial_labels);
 void se2_partition_destroy(se2_partition* partition);
 igraph_error_t se2_partition_store(se2_partition const* working_partition,
                                    igraph_vector_int_list_t* partition_store,
@@ -95,6 +98,7 @@ void se2_partition_add_to_stage(se2_partition* partition,
                                 igraph_integer_t const node_id,
                                 igraph_integer_t const label,
                                 igraph_real_t specificity);
-igraph_error_t se2_partition_commit_changes(se2_partition* partition);
+igraph_error_t se2_partition_commit_changes(se2_partition* partition,
+    se2_neighs const* graph);
 
 #endif

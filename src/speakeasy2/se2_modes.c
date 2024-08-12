@@ -173,7 +173,7 @@ static igraph_error_t se2_bubble_mode(se2_neighs const* graph,
                                       se2_partition* partition,
                                       se2_tracker* tracker)
 {
-  SE2_THREAD_CHECK(se2_burst_large_communities(partition,
+  SE2_THREAD_CHECK(se2_burst_large_communities(graph, partition,
                    FRACTION_NODES_TO_BUBBLE,
                    tracker->smallest_community_to_bubble));
 

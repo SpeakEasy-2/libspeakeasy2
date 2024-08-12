@@ -21,52 +21,6 @@
 #include "se2_label.h"
 #include "se2_neighborlist.h"
 
-static void global_label_proportions(
-  se2_neighs const* graph,
-  se2_partition const* partition,
-  igraph_vector_t* labels_heard,
-  igraph_integer_t const n_labels)
-{
-  igraph_integer_t const n_nodes = se2_vcount(graph);
-  igraph_integer_t acc = 0;
-
-  for (igraph_integer_t i = 0; i < n_nodes; i++) {
-    for (igraph_integer_t j = 0; j < N_NEIGHBORS(* graph, i); j++) {
-      igraph_integer_t const neighbor = NEIGHBOR(* graph, i, j);
-      igraph_integer_t const label = LABEL(* partition)[neighbor];
-      VECTOR(* labels_heard)[label] += WEIGHT(* graph, i, j);
-    }
-  }
-
-  for (igraph_integer_t i = 0; i < n_labels; i++) {
-    acc += VECTOR(* labels_heard)[i];
-  }
-
-  for (igraph_integer_t i = 0; i < n_labels; i++) {
-    VECTOR(* labels_heard)[i] /= acc;
-  }
-}
-
-static void local_label_proportions(
-  se2_neighs const* graph,
-  se2_partition const* partition,
-  igraph_integer_t const node_id,
-  igraph_vector_t* labels_heard,
-  igraph_real_t* kin,
-  igraph_integer_t n_labels)
-{
-  for (igraph_integer_t i = 0; i < N_NEIGHBORS(* graph, node_id); i++) {
-    igraph_integer_t const neighbor = NEIGHBOR(* graph, node_id, i);
-    igraph_integer_t const label = LABEL(* partition)[neighbor];
-    VECTOR(* labels_heard)[label] += WEIGHT(* graph, node_id, i);
-  }
-
-  *kin = 0;
-  for (igraph_integer_t i = 0; i < n_labels; i++) {
-    *kin += VECTOR(* labels_heard)[i];
-  }
-}
-
 /* Scores labels based on the difference between the local and global
  frequencies.  Labels that are overrepresented locally are likely to be of
  importance in tagging a node. */
@@ -76,11 +30,7 @@ igraph_error_t se2_find_most_specific_labels_i(
   se2_iterator* node_iter,
   igraph_integer_t* n_moved)
 {
-  igraph_integer_t max_label = se2_partition_max_label(partition);
-  igraph_vector_t labels_expected;
-  igraph_vector_t labels_observed;
   se2_iterator label_iter;
-  igraph_real_t node_kin = 0;
   igraph_real_t label_specificity = 0, best_label_specificity = 0;
   igraph_integer_t best_label = -1;
   igraph_integer_t n_moved_i = 0;
@@ -88,22 +38,18 @@ igraph_error_t se2_find_most_specific_labels_i(
   SE2_THREAD_CHECK(
     se2_iterator_random_label_init( &label_iter, partition, false));
   IGRAPH_FINALLY(se2_iterator_destroy, &label_iter);
-  SE2_THREAD_CHECK(igraph_vector_init( &labels_expected, max_label + 1));
-  IGRAPH_FINALLY(igraph_vector_destroy, &labels_expected);
-  SE2_THREAD_CHECK(igraph_vector_init( &labels_observed, max_label + 1));
-  IGRAPH_FINALLY(igraph_vector_destroy, &labels_observed);
-
-  global_label_proportions(graph, partition, &labels_expected, max_label + 1);
 
   igraph_integer_t node_id = 0, label_id = 0;
   while ((node_id = se2_iterator_next(node_iter)) != -1) {
-    igraph_vector_null( &labels_observed);
-    local_label_proportions(graph, partition, node_id, &labels_observed,
-                            &node_kin, max_label + 1);
-
     while ((label_id = se2_iterator_next( &label_iter)) != -1) {
-      label_specificity = VECTOR(labels_observed)[label_id] -
-                          (node_kin* VECTOR(labels_expected)[label_id]);
+      igraph_real_t actual =
+        MATRIX(* partition->local_labels_heard, node_id, label_id);
+      igraph_real_t expected =
+        VECTOR(* partition->global_labels_heard)[label_id];
+      igraph_real_t norm_factor = VECTOR(* graph->kin)[node_id] /
+                                  graph->total_weight;
+
+      label_specificity = actual - (norm_factor* expected);
       if ((best_label == -1) || (label_specificity >= best_label_specificity)) {
         best_label_specificity = label_specificity;
         best_label = label_id;
@@ -120,12 +66,10 @@ igraph_error_t se2_find_most_specific_labels_i(
     se2_iterator_shuffle( &label_iter);
   }
 
-  SE2_THREAD_CHECK(se2_partition_commit_changes(partition));
+  SE2_THREAD_CHECK(se2_partition_commit_changes(partition, graph));
 
   se2_iterator_destroy( &label_iter);
-  igraph_vector_destroy( &labels_expected);
-  igraph_vector_destroy( &labels_observed);
-  IGRAPH_FINALLY_CLEAN(3);
+  IGRAPH_FINALLY_CLEAN(1);
 
   if (n_moved) {
     *n_moved = n_moved_i;
@@ -179,6 +123,7 @@ igraph_error_t se2_relabel_worst_nodes(
 }
 
 igraph_error_t se2_burst_large_communities(
+  se2_neighs const* graph,
   se2_partition* partition,
   igraph_real_t const fraction_nodes_to_move,
   igraph_integer_t const min_community_size)
@@ -257,7 +202,7 @@ igraph_error_t se2_burst_large_communities(
   se2_iterator_destroy( &node_iter);
   IGRAPH_FINALLY_CLEAN(4);
 
-  SE2_THREAD_CHECK(se2_partition_commit_changes(partition));
+  SE2_THREAD_CHECK(se2_partition_commit_changes(partition, graph));
 
   return IGRAPH_SUCCESS;
 }
@@ -475,7 +420,7 @@ igraph_error_t se2_merge_well_connected_communities(
   }
 
   if (n_merges > 0) {
-    SE2_THREAD_CHECK(se2_partition_commit_changes(partition));
+    SE2_THREAD_CHECK(se2_partition_commit_changes(partition, graph));
   }
 
 cleanup_sort:

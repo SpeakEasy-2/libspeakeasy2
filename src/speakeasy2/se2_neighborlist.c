@@ -26,8 +26,7 @@
    structure as the neighbor list. If the graph is not weighted the two weight
    arguments should be set to NULL.
 
-   If the graph is directed, the neighbors are the neighbors coming in to the
-   current node.
+   If the graph is directed, the neighbors are the neighbors out from the node.
 
    When finished the SpeakEasy 2 algorithm no longer needs the graph so it is
    safe to delete the graph (and it's weight vector) unless they are needed
@@ -38,37 +37,47 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
 {
   igraph_integer_t const n_nodes = igraph_vcount(graph);
 
+  neigh_list->n_nodes = n_nodes;
+
   neigh_list->neigh_list = igraph_malloc(sizeof(* neigh_list->neigh_list));
   IGRAPH_CHECK_OOM(neigh_list->neigh_list, "");
   IGRAPH_FINALLY(igraph_free, neigh_list->neigh_list);
-  neigh_list->weights = weights ?
-                        igraph_malloc(sizeof(* neigh_list->weights)) : NULL;
-  if (neigh_list->weights) {
-    IGRAPH_CHECK_OOM(neigh_list->weights, "");
-    IGRAPH_FINALLY(igraph_free, neigh_list->weights);
-  }
+  IGRAPH_CHECK(igraph_vector_int_list_init(neigh_list->neigh_list, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_int_list_destroy, neigh_list->neigh_list);
+
   neigh_list->sizes = igraph_malloc(sizeof(* neigh_list->sizes));
   IGRAPH_CHECK_OOM(neigh_list->sizes, "");
   IGRAPH_FINALLY(igraph_free, neigh_list->sizes);
-
-  neigh_list->n_nodes = n_nodes;
   IGRAPH_CHECK(igraph_vector_int_init(neigh_list->sizes, n_nodes));
   IGRAPH_FINALLY(igraph_vector_int_destroy, neigh_list->sizes);
-  IGRAPH_CHECK(igraph_vector_int_list_init(neigh_list->neigh_list, n_nodes));
-  IGRAPH_FINALLY(igraph_vector_int_list_destroy, neigh_list->neigh_list);
+
+  neigh_list->kin = igraph_malloc(sizeof(* neigh_list->kin));
+  IGRAPH_CHECK_OOM(neigh_list->kin, "");
+  IGRAPH_FINALLY(igraph_free, neigh_list->kin);
+  IGRAPH_CHECK(igraph_vector_init(neigh_list->kin, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_destroy, neigh_list->kin);
+
   for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
     igraph_vector_int_t* neighbors = &VECTOR(* neigh_list->neigh_list)[node_id];
-    igraph_neighbors(graph, neighbors, node_id, IGRAPH_IN);
+    igraph_neighbors(graph, neighbors, node_id, IGRAPH_OUT);
     VECTOR(* neigh_list->sizes)[node_id] = igraph_vector_int_size(neighbors);
   }
 
+  neigh_list->total_weight = 0;
   if (!weights) {
-    goto cleanup;
+    neigh_list->weights = NULL;
+    goto skip_weights;
   }
 
   igraph_bool_t const directed = igraph_is_directed(graph);
+
+  neigh_list->weights = igraph_malloc(sizeof(* neigh_list->weights));
+  IGRAPH_CHECK_OOM(neigh_list->weights, "");
+  IGRAPH_FINALLY(igraph_free, neigh_list->weights);
+
   IGRAPH_CHECK(igraph_vector_list_init(neigh_list->weights, n_nodes));
   IGRAPH_FINALLY(igraph_vector_list_destroy, neigh_list->weights);
+
   for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
     igraph_vector_int_t neighbors = VECTOR(* neigh_list->neigh_list)[node_id];
     igraph_integer_t const n_neighbors = igraph_vector_int_size( &neighbors);
@@ -77,14 +86,15 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
 
     for (igraph_integer_t i = 0; i < n_neighbors; i++) {
       igraph_integer_t eid, neigh_id = VECTOR(neighbors)[i];
-      igraph_get_eid(graph, &eid, neigh_id, node_id, directed, false);
+      igraph_get_eid(graph, &eid, node_id, neigh_id, directed, false);
       VECTOR(* neigh_weights)[i] = VECTOR(* weights)[eid];
     }
   }
   IGRAPH_FINALLY_CLEAN(2);
 
-cleanup:
-  IGRAPH_FINALLY_CLEAN(4);
+skip_weights:
+  IGRAPH_FINALLY_CLEAN(6);
+
   return IGRAPH_SUCCESS;
 }
 
@@ -92,12 +102,17 @@ void se2_neighs_destroy(se2_neighs* graph)
 {
   igraph_vector_int_list_destroy(graph->neigh_list);
   igraph_free(graph->neigh_list);
+
   if (HASWEIGHTS(* graph)) {
     igraph_vector_list_destroy(graph->weights);
     igraph_free(graph->weights);
   }
+
   igraph_vector_int_destroy(graph->sizes);
   igraph_free(graph->sizes);
+
+  igraph_vector_destroy(graph->kin);
+  igraph_free(graph->kin);
 }
 
 /* Return the number of nodes in the graph represented by \p graph. */
@@ -114,25 +129,13 @@ igraph_integer_t se2_ecount(se2_neighs const* graph)
 
 igraph_real_t se2_total_weight(se2_neighs const* graph)
 {
-  igraph_real_t ret = 0;
-  for (igraph_integer_t i = 0; i < se2_vcount(graph); i++) {
-    ret += igraph_vector_sum( &VECTOR(* graph->weights)[i]);
-  }
-
-  return ret;
+  return graph->total_weight;
 }
 
 static void se2_strength_in_i(se2_neighs const* graph,
                               igraph_vector_t* degrees)
 {
-  igraph_integer_t const n_nodes = se2_vcount(graph);
-  for (igraph_integer_t i = 0; i < n_nodes; i++) {
-    if (HASWEIGHTS(* graph)) {
-      VECTOR(* degrees)[i] = igraph_vector_sum( &WEIGHTS_IN(* graph, i));
-    } else {
-      VECTOR(* degrees)[i] = N_NEIGHBORS(* graph, i);
-    }
-  }
+  igraph_vector_update(degrees, graph->kin);
 }
 
 static void se2_strength_out_i(se2_neighs const* graph,
@@ -140,8 +143,10 @@ static void se2_strength_out_i(se2_neighs const* graph,
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
-    for (igraph_integer_t j = 0; j < N_NEIGHBORS(* graph, i); j++) {
-      VECTOR(* degrees)[NEIGHBOR(* graph, i, j)] += WEIGHT(* graph, i, j);
+    if (HASWEIGHTS(* graph)) {
+      VECTOR(* degrees)[i] += igraph_vector_sum( &WEIGHTS_IN(* graph, i));
+    } else {
+      VECTOR(* degrees)[i] += N_NEIGHBORS(* graph, i);
     }
   }
 }

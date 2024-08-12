@@ -57,7 +57,7 @@ static igraph_error_t se2_core(se2_neighs const* graph,
   IGRAPH_FINALLY(se2_tracker_destroy, &tracker);
 
   igraph_vector_int_t* ic_store = &VECTOR(* partition_list)[partition_offset];
-  SE2_THREAD_CHECK(se2_partition_init( &working_partition, ic_store));
+  SE2_THREAD_CHECK(se2_partition_init( &working_partition, graph, ic_store));
   IGRAPH_FINALLY(se2_partition_destroy, &working_partition);
 
   igraph_integer_t partition_idx = partition_offset;
@@ -540,29 +540,30 @@ static igraph_error_t se2_subgraph_from_community(
   subgraph->neigh_list = igraph_malloc(sizeof(* subgraph->neigh_list));
   IGRAPH_CHECK_OOM(subgraph->neigh_list, "");
   IGRAPH_FINALLY(igraph_free, subgraph->neigh_list);
+  IGRAPH_CHECK(igraph_vector_int_list_init(subgraph->neigh_list, n_membs));
+  IGRAPH_FINALLY(igraph_vector_int_list_destroy, subgraph->neigh_list);
 
   subgraph->sizes = igraph_malloc(sizeof(* subgraph->sizes));
   IGRAPH_CHECK_OOM(subgraph->sizes, "");
   IGRAPH_FINALLY(igraph_free, subgraph->sizes);
+  IGRAPH_CHECK(igraph_vector_int_init(subgraph->sizes, n_membs));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, subgraph->sizes);
+
+  subgraph->kin = igraph_malloc(sizeof(* subgraph->kin));
+  IGRAPH_CHECK_OOM(subgraph->kin, "");
+  IGRAPH_FINALLY(igraph_free, subgraph->kin);
+  IGRAPH_CHECK(igraph_vector_init(subgraph->kin, n_membs));
+  IGRAPH_FINALLY(igraph_vector_destroy, subgraph->kin);
 
   if (HASWEIGHTS(* origin)) {
     subgraph->weights = igraph_malloc(sizeof(* subgraph->weights));
     IGRAPH_CHECK_OOM(subgraph->weights, "");
     IGRAPH_FINALLY(igraph_free, subgraph->weights);
-  }
-
-  subgraph->n_nodes = n_membs;
-
-  IGRAPH_CHECK(igraph_vector_int_list_init(subgraph->neigh_list, n_membs));
-  IGRAPH_FINALLY(igraph_vector_int_list_destroy, subgraph->neigh_list);
-
-  IGRAPH_CHECK(igraph_vector_int_init(subgraph->sizes, n_membs));
-  IGRAPH_FINALLY(igraph_vector_int_destroy, subgraph->sizes);
-
-  if (HASWEIGHTS(* origin)) {
     IGRAPH_CHECK(igraph_vector_list_init(subgraph->weights, n_membs));
     IGRAPH_FINALLY(igraph_vector_list_destroy, subgraph->weights);
   }
+
+  subgraph->n_nodes = n_membs;
 
   for (igraph_integer_t i = 0; i < n_membs; i++) {
     igraph_integer_t node_id = VECTOR(* members)[i];
@@ -596,10 +597,18 @@ static igraph_error_t se2_subgraph_from_community(
     }
   }
 
+  for (igraph_integer_t i = 0; i < n_membs; i++) {
+    for (igraph_integer_t j = 0; j < N_NEIGHBORS(* subgraph, i); j++) {
+      VECTOR(* subgraph->kin)[NEIGHBOR(* subgraph, i, j)] +=
+        HASWEIGHTS(* subgraph) ? WEIGHT(* subgraph, i, j) : 1;
+    }
+  }
+  subgraph->total_weight = igraph_vector_sum(subgraph->kin);
+
   if (HASWEIGHTS(* subgraph)) {
     IGRAPH_FINALLY_CLEAN(2);
   }
-  IGRAPH_FINALLY_CLEAN(4);
+  IGRAPH_FINALLY_CLEAN(6);
 
   return IGRAPH_SUCCESS;
 }
@@ -648,7 +657,7 @@ static igraph_error_t se2_relabel_hierarchical_communities(
 
 \return Error code:
 */
-igraph_error_t speak_easy_2(se2_neighs const* graph, se2_options* opts,
+igraph_error_t speak_easy_2(se2_neighs* graph, se2_options* opts,
                             igraph_matrix_int_t* memb)
 {
   /* In high level interfaces, the value of file-scope variables are held onto

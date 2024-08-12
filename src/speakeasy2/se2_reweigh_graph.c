@@ -82,7 +82,7 @@ static igraph_error_t se2_mean_link_weight(se2_neighs const* graph,
   return IGRAPH_SUCCESS;
 }
 
-static igraph_error_t se2_weigh_diagonal(se2_neighs const* graph,
+static igraph_error_t se2_weigh_diagonal(se2_neighs* graph,
     igraph_bool_t is_skewed)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
@@ -221,7 +221,26 @@ static igraph_bool_t se2_vector_list_has_negatives(se2_neighs const* graph)
   return false;
 }
 
-igraph_error_t se2_reweigh(se2_neighs const* graph)
+void se2_recalc_degrees(se2_neighs* graph)
+{
+  if (HASWEIGHTS(* graph)) {
+    graph->total_weight = se2_total_weight(graph);
+  } else {
+    graph->total_weight = se2_ecount(graph);
+  }
+
+  for (igraph_integer_t i = 0; i < graph->n_nodes; i++) {
+    VECTOR(* graph->kin)[i] = 0;
+  }
+
+  for (igraph_integer_t i = 0; i < graph->n_nodes; i++) {
+    for (igraph_integer_t j = 0; j < N_NEIGHBORS(* graph, i); j++) {
+      VECTOR(* graph->kin)[NEIGHBOR(* graph, i, j)] += WEIGHT(* graph, i, j);
+    }
+  }
+}
+
+igraph_error_t se2_reweigh(se2_neighs* graph)
 {
   igraph_bool_t is_skewed = skewness(graph) >= 2;
 
@@ -231,6 +250,8 @@ igraph_error_t se2_reweigh(se2_neighs const* graph)
   if ((is_skewed) && (!se2_vector_list_has_negatives(graph))) {
     se2_add_offset(graph);
   }
+
+  se2_recalc_degrees(graph);
 
   return IGRAPH_SUCCESS;
 }
