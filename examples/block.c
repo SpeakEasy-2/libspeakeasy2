@@ -1,8 +1,27 @@
 #include <speak_easy_2.h>
+#include <signal.h>
 #include "plot_adj.h"
+
+igraph_error_t errcode = IGRAPH_SUCCESS;
+
+static void signal_handler(int sig)
+{
+  if (sig == SIGINT) {
+    errcode = IGRAPH_INTERRUPTED;
+  }
+}
+
+static igraph_bool_t check_user_interrupt(void)
+{
+  return errcode == IGRAPH_INTERRUPTED;
+}
 
 int main()
 {
+  signal(SIGINT, signal_handler);
+  igraph_set_error_handler(igraph_error_handler_printignore);
+  se2_set_check_user_interrupt_func(check_user_interrupt);
+
   igraph_t graph;
   /* igraph_integer_t n_nodes = 4000, n_types = 4; */
   igraph_integer_t n_nodes = 40, n_types = 4;
@@ -42,7 +61,14 @@ int main()
     .verbose = true,
   };
 
-  speak_easy_2( &neigh_list, &opts, &membership);
+  igraph_error_t rs;
+  if ((rs = speak_easy_2( &neigh_list, &opts, &membership)) != IGRAPH_SUCCESS) {
+    igraph_destroy( &graph);
+    se2_neighs_destroy( &neigh_list);
+    igraph_vector_int_destroy( &ground_truth);
+    igraph_matrix_int_destroy( &membership);
+    return rs;
+  };
 
   // Order nodes by ground truth community structure
   igraph_matrix_int_view_from_vector( &gt_membership, &ground_truth, 1);
