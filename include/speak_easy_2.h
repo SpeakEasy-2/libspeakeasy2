@@ -26,13 +26,15 @@ typedef struct {
   igraph_vector_list_t* weights;
   igraph_vector_int_t* sizes;
   igraph_integer_t n_nodes;
+  igraph_vector_t* kin;
+  igraph_real_t total_weight;
 } se2_neighs;
 
 igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
     igraph_vector_t const* weights, se2_neighs* neigh_list);
 void se2_neighs_destroy(se2_neighs* graph);
 
-igraph_error_t speak_easy_2(se2_neighs const* graph, se2_options* opts,
+igraph_error_t speak_easy_2(se2_neighs* graph, se2_options* opts,
                             igraph_matrix_int_t* res);
 igraph_error_t se2_order_nodes(se2_neighs const* graph,
                                igraph_matrix_int_t const* memb,
