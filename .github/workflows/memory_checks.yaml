@@ -1,0 +1,79 @@
+name: Check for memory errors using address sanitizer and valgrind
+
+on:
+  push:
+    branches:
+      - devel
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  checks: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  sanitizer:
+    name: Check Address Sanitizer
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Clone igraph
+        run: |
+          git submodule init
+          git submodule update --recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt upgrade
+          sudo apt install cmake ninja-build clang
+
+      - name: Build for address sanitizer
+        run: |
+          CC=clang cmake -B sanitizer . -G Ninja -D CMAKE_BUILD_TYPE=Sanitizer
+          cmake --build sanitizer
+
+      - name: Test
+        run: sanitizer/examples/weighted_block
+
+  valgrind:
+    name: Check with valgrind
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Clone igraph
+        run: |
+          git submodule init
+          git submodule update --recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt upgrade
+          sudo apt install cmake ninja-build gcc valgrind
+
+      - name: Build for address sanitizer
+        run: |
+          cmake -B debug . -G Ninja -D CMAKE_BUILD_TYPE=Debug
+          cmake --build debug
+
+      - name: unweighted
+        run: |
+          valgrind --track-origins=yes --leak-check=full debug/examples/block
+
+      - name: weighted
+        run: |
+          valgrind --track-origins=yes --leak-check=full debug/examples/weighted_block
+
+      - name: interrupted
+        run: |
+          valgrind --track-origins=yes --leak-check=full debug/examples/interrupt

@@ -1,30 +1,12 @@
 #include <speak_easy_2.h>
-#include <signal.h>
 #include "plot_adj.h"
-
-igraph_error_t errcode = IGRAPH_SUCCESS;
-
-static void signal_handler(int sig)
-{
-  if (sig == SIGINT) {
-    errcode = IGRAPH_INTERRUPTED;
-  }
-}
-
-static igraph_bool_t check_user_interrupt(void)
-{
-  return errcode == IGRAPH_INTERRUPTED;
-}
 
 int main()
 {
-  signal(SIGINT, signal_handler);
-  igraph_set_error_handler(igraph_error_handler_printignore);
-  se2_set_check_user_interrupt_func(check_user_interrupt);
-
   igraph_t graph;
-  igraph_integer_t n_nodes = 40, n_types = 4;
+  igraph_vector_t weights;
   se2_neighs neigh_list;
+  igraph_integer_t n_nodes = 40, n_types = 4;
   igraph_real_t const mu = 0.25; // probability of between community edges.
   igraph_vector_t type_dist;
   igraph_real_t type_dist_arr[] = { 0.4, 0.25, 0.2, 0.15 };
@@ -48,10 +30,18 @@ int main()
 
   igraph_preference_game( &graph, n_nodes, n_types, &type_dist, false,
                           &pref_mat, &ground_truth, IGRAPH_UNDIRECTED, false);
-
   igraph_matrix_destroy( &pref_mat);
 
-  se2_igraph_to_neighbor_list( &graph, NULL, &neigh_list);
+  igraph_vector_init( &weights, igraph_ecount( &graph));
+  for (igraph_integer_t i = 0; i < igraph_ecount( &graph); i++) {
+    igraph_real_t mean = VECTOR(ground_truth)[IGRAPH_FROM( &graph, i)] ==
+                         VECTOR(ground_truth)[IGRAPH_TO( &graph, i)] ?
+                         2 : 0;
+    VECTOR(weights)[i] = igraph_rng_get_normal(igraph_rng_default(), mean, 0.5);
+  }
+
+  se2_igraph_to_neighbor_list( &graph, &weights, &neigh_list);
+  igraph_vector_destroy( &weights);
 
   // Running SpeakEasy2
   se2_options opts = {
@@ -60,16 +50,8 @@ int main()
     .verbose = true,
   };
 
-  igraph_error_t rs;
-  if ((rs = speak_easy_2( &neigh_list, &opts, &membership)) != IGRAPH_SUCCESS) {
-    igraph_destroy( &graph);
-    se2_neighs_destroy( &neigh_list);
-    igraph_vector_int_destroy( &ground_truth);
-    igraph_matrix_int_destroy( &membership);
-    return rs;
-  };
+  speak_easy_2( &neigh_list, &opts, &membership);
 
-  // Order nodes by ground truth community structure
   igraph_matrix_int_view_from_vector( &gt_membership, &ground_truth, 1);
   se2_order_nodes( &neigh_list, &gt_membership, &ordering);
   igraph_vector_int_destroy( &ground_truth);

@@ -13,31 +13,6 @@ permissions:
   pull-requests: write
 
 jobs:
-  build-linux:
-    name: Compile on Linux
-    runs-on: ubuntu-20.04
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          fetch-depth: 0
-
-      - name: Clone igraph
-        run: |
-          git submodule init
-          git submodule update --recursive
-
-      - name: Install dependencies
-        run: |
-          sudo apt update && sudo apt upgrade
-          sudo apt install cmake ninja-build gcc g++
-
-      - name: Build from source
-        run: |
-          cmake -B build . -G Ninja
-          cmake --build build
-
   build-windows:
     name: Compile on Windows
     runs-on: windows-latest

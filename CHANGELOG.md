@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Memory checks to workflows.
+
 ### Changed
 
 - Store labels heard instead of recalculating every step to improve speed at cost of memory.

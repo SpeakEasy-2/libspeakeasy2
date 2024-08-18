@@ -13,7 +13,7 @@ static void signal_handler(int sig)
 
 static igraph_bool_t check_user_interrupt(void)
 {
-  return errcode == IGRAPH_INTERRUPTED;
+  return igraph_rng_get_unif01(igraph_rng_default()) > 0.3;
 }
 
 int main()
@@ -66,7 +66,7 @@ int main()
     se2_neighs_destroy( &neigh_list);
     igraph_vector_int_destroy( &ground_truth);
     igraph_matrix_int_destroy( &membership);
-    return rs;
+    return IGRAPH_SUCCESS;
   };
 
   // Order nodes by ground truth community structure
