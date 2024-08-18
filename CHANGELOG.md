@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Store labels heard instead of recalculating every step to improve speed at cost of memory.
+- Manually calculate neighbors by iterating over edges to remove need for slow searches.
 
 ## [v0.1.6] 2024-08-08
 
