@@ -105,7 +105,7 @@ static igraph_error_t se2_weigh_diagonal(se2_neighs* graph,
           VECTOR(diagonal_edges)[i] = j;
           if (HASWEIGHTS(* graph)) {
             /* Importantly set to 0 so diagonal weights don't impact
-            calculation of mean link weight if skewed. */
+               calculation of mean link weight if skewed. */
             igraph_vector_t* w = &WEIGHTS_IN(* graph, i);
             VECTOR(* w)[j] = 0;
           }
@@ -224,7 +224,10 @@ static igraph_bool_t se2_vector_list_has_negatives(se2_neighs const* graph)
 void se2_recalc_degrees(se2_neighs* graph)
 {
   if (HASWEIGHTS(* graph)) {
-    graph->total_weight = se2_total_weight(graph);
+    graph->total_weight = 0;
+    for (igraph_integer_t i = 0; i < se2_vcount(graph); i++) {
+      graph->total_weight += igraph_vector_sum( &WEIGHTS_IN(* graph, i));
+    }
   } else {
     graph->total_weight = se2_ecount(graph);
   }

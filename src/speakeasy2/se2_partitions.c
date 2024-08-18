@@ -587,27 +587,27 @@ static igraph_error_t se2_move_labels_heard(se2_partition* partition,
     }
   }
 
-  for (igraph_integer_t i = 0; i < partition->n_nodes; i++) {
-    if (LABEL(* partition)[i] == STAGE(* partition)[i]) {
+  for (igraph_integer_t node_id = 0; node_id < partition->n_nodes; node_id++) {
+    if (LABEL(* partition)[node_id] == STAGE(* partition)[node_id]) {
       continue;
     }
 
-    igraph_integer_t const old_label = LABEL(* partition)[i];
-    igraph_integer_t const new_label = STAGE(* partition)[i];
+    igraph_integer_t const old_label = LABEL(* partition)[node_id];
+    igraph_integer_t const new_label = STAGE(* partition)[node_id];
 
     igraph_real_t acc = 0;
-    for (igraph_integer_t j = 0; j < N_NEIGHBORS(* graph, i); j++) {
-      acc += WEIGHT(* graph, i, j);
+    for (igraph_integer_t j = 0; j < N_NEIGHBORS(* graph, node_id); j++) {
+      acc += WEIGHT(* graph, node_id, j);
     }
 
     VECTOR(* partition->global_labels_heard)[old_label] -= acc;
     VECTOR(* partition->global_labels_heard)[new_label] += acc;
 
-    for (igraph_integer_t j = 0; j < N_NEIGHBORS(* graph, i); j++) {
-      MATRIX(* partition->local_labels_heard, NEIGHBOR(* graph, i, j),
-             old_label) -= WEIGHT(* graph, i, j);
-      MATRIX(* partition->local_labels_heard, NEIGHBOR(* graph, i, j),
-             new_label) += WEIGHT(* graph, i, j);
+    for (igraph_integer_t j = 0; j < N_NEIGHBORS(* graph, node_id); j++) {
+      MATRIX(* partition->local_labels_heard, NEIGHBOR(* graph, node_id, j),
+             old_label) -= WEIGHT(* graph, node_id, j);
+      MATRIX(* partition->local_labels_heard, NEIGHBOR(* graph, node_id, j),
+             new_label) += WEIGHT(* graph, node_id, j);
     }
   }
 
