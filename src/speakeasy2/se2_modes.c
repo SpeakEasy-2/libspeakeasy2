@@ -113,8 +113,7 @@ static void se2_post_step_hook(se2_tracker* tracker)
   switch (tracker->mode) {
   case SE2_BUBBLE:
     if (!tracker->bubbling_has_peaked) {
-      if ((tracker->labels_after_last_bubbling > 2) &&
-          (tracker->max_labels_after_bubbling >
+      if ((tracker->max_labels_after_bubbling >
            (tracker->labels_after_last_bubbling * 0.9))) {
         tracker->bubbling_has_peaked = true;
       }

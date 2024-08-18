@@ -536,6 +536,7 @@ static igraph_error_t se2_subgraph_from_community(
   igraph_vector_int_t const* members)
 {
   igraph_integer_t const n_membs = igraph_vector_int_size(members);
+  subgraph->n_nodes = n_membs;
 
   subgraph->neigh_list = igraph_malloc(sizeof(* subgraph->neigh_list));
   IGRAPH_CHECK_OOM(subgraph->neigh_list, "");
@@ -561,9 +562,9 @@ static igraph_error_t se2_subgraph_from_community(
     IGRAPH_FINALLY(igraph_free, subgraph->weights);
     IGRAPH_CHECK(igraph_vector_list_init(subgraph->weights, n_membs));
     IGRAPH_FINALLY(igraph_vector_list_destroy, subgraph->weights);
+  } else {
+    subgraph->weights = NULL;
   }
-
-  subgraph->n_nodes = n_membs;
 
   for (igraph_integer_t i = 0; i < n_membs; i++) {
     igraph_integer_t node_id = VECTOR(* members)[i];
