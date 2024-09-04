@@ -17,31 +17,29 @@
  */
 
 #include "se2_seeding.h"
-#include "se2_random.h"
-#include "se2_neighborlist.h"
 #include "se2_error_handling.h"
+#include "se2_neighborlist.h"
+#include "se2_random.h"
 
-igraph_error_t se2_seeding(se2_neighs const* graph,
-                           se2_options const* opts,
-                           igraph_vector_int_t* ic_store,
-                           igraph_integer_t* n_unique)
+igraph_error_t se2_seeding(se2_neighs const *graph, se2_options const *opts,
+                           igraph_vector_int_t *ic_store,
+                           igraph_integer_t *n_unique)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_vector_bool_t label_seen;
   igraph_integer_t n_unique_i = 0;
 
-  SE2_THREAD_CHECK(igraph_vector_bool_init( &label_seen,
-                   opts->target_clusters));
+  SE2_THREAD_CHECK(igraph_vector_bool_init(&label_seen, opts->target_clusters));
   IGRAPH_FINALLY(igraph_vector_bool_destroy, &label_seen);
 
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
-    VECTOR(* ic_store)[i] = i % opts->target_clusters;
+    VECTOR(*ic_store)[i] = i % opts->target_clusters;
   }
   se2_randperm(ic_store, n_nodes, n_nodes);
 
   igraph_integer_t label = 0, biggest_label = 0;
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
-    label = VECTOR(* ic_store)[i];
+    label = VECTOR(*ic_store)[i];
     biggest_label = label > biggest_label ? label : biggest_label;
 
     if (!VECTOR(label_seen)[label]) {
@@ -49,13 +47,13 @@ igraph_error_t se2_seeding(se2_neighs const* graph,
       VECTOR(label_seen)[label] = true;
     }
   }
-  igraph_vector_bool_destroy( &label_seen);
+  igraph_vector_bool_destroy(&label_seen);
   IGRAPH_FINALLY_CLEAN(1);
 
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
     // If node's only incoming edge is a self-loop.
-    if (N_NEIGHBORS(* graph, i) == 1) {
-      VECTOR(* ic_store)[i] = ++biggest_label;
+    if (N_NEIGHBORS(*graph, i) == 1) {
+      VECTOR(*ic_store)[i] = ++biggest_label;
       n_unique_i++;
     }
   }

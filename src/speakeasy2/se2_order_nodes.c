@@ -16,15 +16,13 @@
  * with SpeakEasy 2. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <speak_easy_2.h>
 #include "se2_neighborlist.h"
+#include <speak_easy_2.h>
 
-static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const* memb,
-                                        igraph_vector_int_t* initial,
-                                        igraph_matrix_int_t* ordering,
-                                        igraph_integer_t const level,
-                                        igraph_integer_t const start,
-                                        igraph_integer_t const len)
+static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const *memb,
+                                        igraph_vector_int_t *initial,
+                                        igraph_matrix_int_t *ordering, igraph_integer_t const level,
+                                        igraph_integer_t const start, igraph_integer_t const len)
 {
   if (len == 0) {
     return IGRAPH_SUCCESS;
@@ -40,48 +38,49 @@ static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const* memb,
   igraph_integer_t comm_min = IGRAPH_INTEGER_MAX;
   igraph_integer_t comm_max = 0;
   for (igraph_integer_t i = 0; i < len; i++) {
-    if (MATRIX(* memb, level, VECTOR(* initial)[start + i]) < comm_min) {
-      comm_min = MATRIX(* memb, level, VECTOR(* initial)[start + i]);
+    if (MATRIX(*memb, level, VECTOR(*initial)[start + i]) < comm_min) {
+      comm_min = MATRIX(*memb, level, VECTOR(*initial)[start + i]);
     }
 
-    if (MATRIX(* memb, level, VECTOR(* initial)[start + i]) > comm_max) {
-      comm_max = MATRIX(* memb, level, VECTOR(* initial)[start + i]);
+    if (MATRIX(*memb, level, VECTOR(*initial)[start + i]) > comm_max) {
+      comm_max = MATRIX(*memb, level, VECTOR(*initial)[start + i]);
     }
   }
 
   igraph_integer_t const n_communities = comm_max - comm_min + 1;
-  IGRAPH_CHECK(igraph_vector_int_init( &comm_sizes, n_communities));
+  IGRAPH_CHECK(igraph_vector_int_init(&comm_sizes, n_communities));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &comm_sizes);
 
-  IGRAPH_CHECK(igraph_vector_int_init( &pos, n_communities));
+  IGRAPH_CHECK(igraph_vector_int_init(&pos, n_communities));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &pos);
 
   for (igraph_integer_t i = 0; i < len; i++) {
-    VECTOR(comm_sizes)[MATRIX(* memb, level,
-                              VECTOR(* initial)[start + i]) - comm_min]++;
+    VECTOR(comm_sizes)
+    [MATRIX(*memb, level, VECTOR(*initial)[start + i]) - comm_min]++;
   }
 
   igraph_vector_int_t indices;
-  IGRAPH_CHECK(igraph_vector_int_init( &indices, n_communities));
+  IGRAPH_CHECK(igraph_vector_int_init(&indices, n_communities));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &indices);
-  IGRAPH_CHECK(igraph_vector_int_qsort_ind( &comm_sizes, &indices,
-               IGRAPH_DESCENDING));
+  IGRAPH_CHECK(
+    igraph_vector_int_qsort_ind(&comm_sizes, &indices, IGRAPH_DESCENDING));
 
   VECTOR(pos)[VECTOR(indices)[0]] = start;
   for (igraph_integer_t i = 1; i < n_communities; i++) {
-    VECTOR(pos)[VECTOR(indices)[i]] = VECTOR(pos)[VECTOR(indices)[i - 1]] +
-                                      VECTOR(comm_sizes)[VECTOR(indices)[i - 1]];
+    VECTOR(pos)
+    [VECTOR(indices)[i]] = VECTOR(pos)[VECTOR(indices)[i - 1]] +
+                           VECTOR(comm_sizes)[VECTOR(indices)[i - 1]];
   }
 
   for (igraph_integer_t i = 0; i < len; i++) {
-    igraph_integer_t comm = MATRIX(* memb, level, VECTOR(* initial)[start + i]) -
-                            comm_min;
-    MATRIX(* ordering, level, VECTOR(pos)[comm]) = VECTOR(* initial)[start + i];
+    igraph_integer_t comm =
+      MATRIX(*memb, level, VECTOR(*initial)[start + i]) - comm_min;
+    MATRIX(*ordering, level, VECTOR(pos)[comm]) = VECTOR(*initial)[start + i];
     VECTOR(pos)[comm]++;
   }
 
   for (igraph_integer_t i = 0; i < len; i++) {
-    VECTOR(* initial)[start + i] = MATRIX(* ordering, level, start + i);
+    VECTOR(*initial)[start + i] = MATRIX(*ordering, level, start + i);
   }
 
   igraph_integer_t comm_start = start;
@@ -90,9 +89,9 @@ static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const* memb,
     se2_order_nodes_i(memb, initial, ordering, level + 1, comm_start, comm_len);
     comm_start += comm_len;
   }
-  igraph_vector_int_destroy( &indices);
-  igraph_vector_int_destroy( &pos);
-  igraph_vector_int_destroy( &comm_sizes);
+  igraph_vector_int_destroy(&indices);
+  igraph_vector_int_destroy(&pos);
+  igraph_vector_int_destroy(&comm_sizes);
   IGRAPH_FINALLY_CLEAN(3);
 
   return IGRAPH_SUCCESS;
@@ -113,34 +112,34 @@ static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const* memb,
 
 \return Error code
 */
-igraph_error_t se2_order_nodes(se2_neighs const* graph,
-                               igraph_matrix_int_t const* memb,
-                               igraph_matrix_int_t* ordering)
+igraph_error_t se2_order_nodes(se2_neighs const *graph,
+                               igraph_matrix_int_t const *memb,
+                               igraph_matrix_int_t *ordering)
 {
   igraph_integer_t const n_nodes = igraph_matrix_int_ncol(memb);
   igraph_vector_t degrees;
 
-  IGRAPH_CHECK(igraph_vector_init( &degrees, n_nodes));
+  IGRAPH_CHECK(igraph_vector_init(&degrees, n_nodes));
   IGRAPH_FINALLY(igraph_vector_destroy, &degrees);
 
-  IGRAPH_CHECK(igraph_matrix_int_init(ordering, igraph_matrix_int_nrow(memb),
-                                      n_nodes));
+  IGRAPH_CHECK(
+    igraph_matrix_int_init(ordering, igraph_matrix_int_nrow(memb), n_nodes));
   IGRAPH_FINALLY(igraph_matrix_int_destroy, ordering);
 
   IGRAPH_CHECK(se2_strength(graph, &degrees, IGRAPH_ALL));
 
   // Ensure nodes are ordered by highest-lowest degree within communities.
   igraph_vector_int_t init_ordering;
-  IGRAPH_CHECK(igraph_vector_int_init( &init_ordering, n_nodes));
+  IGRAPH_CHECK(igraph_vector_int_init(&init_ordering, n_nodes));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &init_ordering);
 
-  IGRAPH_CHECK(igraph_vector_qsort_ind( &degrees, &init_ordering,
-                                        IGRAPH_DESCENDING));
+  IGRAPH_CHECK(
+    igraph_vector_qsort_ind(&degrees, &init_ordering, IGRAPH_DESCENDING));
 
   se2_order_nodes_i(memb, &init_ordering, ordering, 0, 0, n_nodes);
 
-  igraph_vector_int_destroy( &init_ordering);
-  igraph_vector_destroy( &degrees);
+  igraph_vector_int_destroy(&init_ordering);
+  igraph_vector_destroy(&degrees);
   IGRAPH_FINALLY_CLEAN(3);
 
   return IGRAPH_SUCCESS;

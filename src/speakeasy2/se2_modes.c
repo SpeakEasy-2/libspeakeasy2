@@ -17,18 +17,19 @@
  */
 
 #include "se2_modes.h"
-#include "se2_label.h"
 #include "se2_error_handling.h"
+#include "se2_label.h"
 
 #define TYPICAL_FRACTION_NODES_TO_UPDATE 0.9
 #define NURTURE_FRACTION_NODES_TO_UPDATE 0.9
 #define FRACTION_NODES_TO_BUBBLE 0.9
 #define POST_PEAK_BUBBLE_LIMIT 2
 
-igraph_error_t se2_tracker_init(se2_tracker* tracker, se2_options const* opts)
+igraph_error_t se2_tracker_init(se2_tracker *tracker,
+                                se2_options const *opts)
 {
-  igraph_integer_t* time_since_mode_tracker = igraph_calloc(SE2_NUM_MODES,
-    sizeof(* time_since_mode_tracker));
+  igraph_integer_t *time_since_mode_tracker =
+    igraph_calloc(SE2_NUM_MODES, sizeof(*time_since_mode_tracker));
   SE2_THREAD_CHECK_OOM(time_since_mode_tracker);
   IGRAPH_FINALLY(igraph_free, time_since_mode_tracker);
 
@@ -52,28 +53,29 @@ igraph_error_t se2_tracker_init(se2_tracker* tracker, se2_options const* opts)
   return IGRAPH_SUCCESS;
 }
 
-void se2_tracker_destroy(se2_tracker* tracker)
+void se2_tracker_destroy(se2_tracker *tracker)
 {
   igraph_free(tracker->time_since_last);
 }
 
-igraph_integer_t se2_tracker_mode(se2_tracker const* tracker)
+igraph_integer_t se2_tracker_mode(se2_tracker const *tracker)
 {
   return tracker->mode;
 }
 
-igraph_bool_t se2_do_terminate(se2_tracker* tracker)
+igraph_bool_t se2_do_terminate(se2_tracker *tracker)
 {
   // Should never be greater than n_partitions.
   return tracker->post_intervention_count >= tracker->n_partitions;
 }
 
-igraph_bool_t se2_do_save_partition(se2_tracker* tracker)
+igraph_bool_t se2_do_save_partition(se2_tracker *tracker)
 {
   return tracker->intervention_event;
 }
 
-static void se2_select_mode(igraph_integer_t const time, se2_tracker* tracker)
+static void se2_select_mode(igraph_integer_t const time,
+                            se2_tracker *tracker)
 {
   tracker->mode = SE2_TYPICAL; // Default
 
@@ -102,7 +104,7 @@ static void se2_select_mode(igraph_integer_t const time, se2_tracker* tracker)
   }
 }
 
-static void se2_post_step_hook(se2_tracker* tracker)
+static void se2_post_step_hook(se2_tracker *tracker)
 {
   tracker->intervention_event = false;
   tracker->time_since_last[tracker->mode] = 0;
@@ -152,61 +154,58 @@ static void se2_post_step_hook(se2_tracker* tracker)
   }
 }
 
-static igraph_error_t se2_typical_mode(se2_neighs const* graph,
-                                       se2_partition* partition,
-                                       se2_tracker* tracker)
+static igraph_error_t se2_typical_mode(se2_neighs const *graph,
+                                       se2_partition *partition,
+                                       se2_tracker *tracker)
 {
   if ((tracker->time_since_last[SE2_TYPICAL] == 1) &&
       !tracker->has_partition_changed) {
     return IGRAPH_SUCCESS;
   }
 
-  SE2_THREAD_CHECK(se2_find_most_specific_labels(graph, partition,
-                   TYPICAL_FRACTION_NODES_TO_UPDATE,
-                   &(tracker->has_partition_changed)));
+  SE2_THREAD_CHECK(se2_find_most_specific_labels(
+                     graph, partition, TYPICAL_FRACTION_NODES_TO_UPDATE,
+                     &(tracker->has_partition_changed)));
 
   return IGRAPH_SUCCESS;
 }
 
-static igraph_error_t se2_bubble_mode(se2_neighs const* graph,
-                                      se2_partition* partition,
-                                      se2_tracker* tracker)
+static igraph_error_t se2_bubble_mode(se2_neighs const *graph,
+                                      se2_partition *partition,
+                                      se2_tracker *tracker)
 {
-  SE2_THREAD_CHECK(se2_burst_large_communities(graph, partition,
-                   FRACTION_NODES_TO_BUBBLE,
-                   tracker->smallest_community_to_bubble));
+  SE2_THREAD_CHECK(
+    se2_burst_large_communities(graph, partition, FRACTION_NODES_TO_BUBBLE,
+                                tracker->smallest_community_to_bubble));
 
   tracker->labels_after_last_bubbling = partition->n_labels;
 
   return IGRAPH_SUCCESS;
 }
 
-static igraph_error_t se2_merge_mode(se2_neighs const* graph,
-                                     se2_partition* partition,
-                                     se2_tracker* tracker)
+static igraph_error_t se2_merge_mode(se2_neighs const *graph,
+                                     se2_partition *partition,
+                                     se2_tracker *tracker)
 {
   SE2_THREAD_CHECK(se2_merge_well_connected_communities(
-                     graph, partition,
-                     &(tracker->max_prev_merge_threshold),
+                     graph, partition, &(tracker->max_prev_merge_threshold),
                      &(tracker->is_partition_stable)));
 
   return IGRAPH_SUCCESS;
 }
 
-static igraph_error_t se2_nurture_mode(se2_neighs const* graph,
-                                       se2_partition* partition)
+static igraph_error_t se2_nurture_mode(se2_neighs const *graph,
+                                       se2_partition *partition)
 {
-  SE2_THREAD_CHECK(
-    se2_relabel_worst_nodes(graph, partition, NURTURE_FRACTION_NODES_TO_UPDATE));
+  SE2_THREAD_CHECK(se2_relabel_worst_nodes(graph, partition,
+                   NURTURE_FRACTION_NODES_TO_UPDATE));
 
   return IGRAPH_SUCCESS;
 }
 
-igraph_error_t se2_mode_run_step(
-  se2_neighs const* graph,
-  se2_partition* partition,
-  se2_tracker* tracker,
-  igraph_integer_t const time)
+igraph_error_t se2_mode_run_step(se2_neighs const *graph,
+                                 se2_partition *partition, se2_tracker *tracker,
+                                 igraph_integer_t const time)
 {
   se2_select_mode(time, tracker);
 

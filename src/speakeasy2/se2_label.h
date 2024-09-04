@@ -19,30 +19,25 @@
 #ifndef SE2_LABEL_H
 #define SE2_LABEL_H
 
-#include <speak_easy_2.h>
 #include "se2_partitions.h"
+#include <speak_easy_2.h>
 
-igraph_error_t se2_find_most_specific_labels(
-  se2_neighs const* graph,
-  se2_partition* partition,
-  igraph_real_t const fraction_nodes_to_label,
-  igraph_bool_t* did_change);
+igraph_error_t se2_find_most_specific_labels(se2_neighs const *graph,
+    se2_partition *partition,
+    igraph_real_t const fraction_nodes_to_label,
+    igraph_bool_t *did_change);
 
-igraph_error_t se2_relabel_worst_nodes(
-  se2_neighs const* graph,
-  se2_partition* partition,
-  igraph_real_t const fraction_nodes_to_label);
+igraph_error_t se2_relabel_worst_nodes(se2_neighs const *graph,
+                                       se2_partition *partition,
+                                       igraph_real_t const fraction_nodes_to_label);
 
-igraph_error_t se2_burst_large_communities(
-  se2_neighs const* graph,
-  se2_partition* partition,
-  igraph_real_t const fraction_nodes_to_move,
-  igraph_integer_t const min_community_size);
+igraph_error_t se2_burst_large_communities(se2_neighs const *graph,
+    se2_partition *partition,
+    igraph_real_t const fraction_nodes_to_move,
+    igraph_integer_t const min_community_size);
 
 igraph_error_t se2_merge_well_connected_communities(
-  se2_neighs const* graph,
-  se2_partition* partition,
-  igraph_real_t* prev_merge_threshold,
-  igraph_bool_t* is_partition_stable);
+  se2_neighs const *graph, se2_partition *partition,
+  igraph_real_t *prev_merge_threshold, igraph_bool_t *is_partition_stable);
 
 #endif
