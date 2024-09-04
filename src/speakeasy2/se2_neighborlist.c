@@ -80,15 +80,16 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
 
   for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
     igraph_vector_int_t* neighbors = &VECTOR(* neigh_list->neigh_list)[node_id];
-    igraph_vector_int_resize(neighbors, VECTOR(* neigh_list->sizes)[node_id]);
+    IGRAPH_CHECK(igraph_vector_int_resize(neighbors,
+                                          VECTOR(* neigh_list->sizes)[node_id]));
     if (weights) {
       igraph_vector_t* w = &VECTOR(* neigh_list->weights)[node_id];
-      igraph_vector_resize(w, VECTOR(* neigh_list->sizes)[node_id]);
+      IGRAPH_CHECK(igraph_vector_resize(w, VECTOR(* neigh_list->sizes)[node_id]));
     }
   }
 
   igraph_vector_int_t neigh_counts;
-  igraph_vector_int_init( &neigh_counts, n_nodes);
+  IGRAPH_CHECK(igraph_vector_int_init( &neigh_counts, n_nodes));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &neigh_counts);
 
   for (igraph_integer_t eid = 0; eid < igraph_ecount(graph); eid++) {
@@ -167,14 +168,15 @@ igraph_real_t se2_total_weight(se2_neighs const* graph)
   return graph->total_weight;
 }
 
-static void se2_strength_in_i(se2_neighs const* graph,
-                              igraph_vector_t* degrees)
+static igraph_error_t se2_strength_in_i(se2_neighs const* graph,
+                                        igraph_vector_t* degrees)
 {
-  igraph_vector_update(degrees, graph->kin);
+  IGRAPH_CHECK(igraph_vector_update(degrees, graph->kin));
+  return IGRAPH_SUCCESS;
 }
 
-static void se2_strength_out_i(se2_neighs const* graph,
-                               igraph_vector_t* degrees)
+static igraph_error_t se2_strength_out_i(se2_neighs const* graph,
+    igraph_vector_t* degrees)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
@@ -184,6 +186,8 @@ static void se2_strength_out_i(se2_neighs const* graph,
       VECTOR(* degrees)[i] += N_NEIGHBORS(* graph, i);
     }
   }
+
+  return IGRAPH_SUCCESS;
 }
 
 igraph_error_t se2_strength(se2_neighs const* graph,
@@ -192,16 +196,16 @@ igraph_error_t se2_strength(se2_neighs const* graph,
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   if (igraph_vector_size(degrees) != n_nodes) {
-    igraph_vector_resize(degrees, n_nodes);
+    IGRAPH_CHECK(igraph_vector_resize(degrees, n_nodes));
   }
   igraph_vector_null(degrees);
 
   if ((mode == IGRAPH_IN) || (mode == IGRAPH_ALL)) {
-    se2_strength_in_i(graph, degrees);
+    IGRAPH_CHECK(se2_strength_in_i(graph, degrees));
   }
 
   if ((mode == IGRAPH_OUT) || (mode == IGRAPH_ALL)) {
-    se2_strength_out_i(graph, degrees);
+    IGRAPH_CHECK(se2_strength_out_i(graph, degrees));
   }
 
   return IGRAPH_SUCCESS;

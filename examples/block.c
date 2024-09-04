@@ -11,16 +11,18 @@ static void signal_handler(int sig)
   }
 }
 
-static igraph_bool_t check_user_interrupt(void)
+static igraph_error_t check_user_interrupt(void* data)
 {
-  return errcode == IGRAPH_INTERRUPTED;
+  IGRAPH_UNUSED(data);
+
+  return errcode;
 }
 
 int main()
 {
   signal(SIGINT, signal_handler);
   igraph_set_error_handler(igraph_error_handler_printignore);
-  se2_set_check_user_interrupt_func(check_user_interrupt);
+  igraph_set_interruption_handler(check_user_interrupt);
 
   igraph_t graph;
   igraph_integer_t n_nodes = 40, n_types = 4;

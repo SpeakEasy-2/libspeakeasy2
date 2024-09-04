@@ -19,11 +19,6 @@
 #include <stdio.h>
 #include "se2_interface.h"
 
-static igraph_bool_t ignore_user_interrupt(void)
-{
-  return false;
-}
-
 #ifndef USING_R
 static se2_int_printf_func_t* se2_i_int_printf = printf;
 #else
@@ -36,8 +31,6 @@ static se2_int_printf_func_t* se2_i_int_printf = ignore_printf;
 #endif
 
 static se2_void_printf_func_t* se2_i_void_printf = NULL;
-static se2_check_user_interrupt_func_t* se2_i_check_user_interrupt =
-  ignore_user_interrupt;
 
 void se2_set_int_printf_func(se2_int_printf_func_t* func)
 {
@@ -49,11 +42,6 @@ void se2_set_void_printf_func(se2_void_printf_func_t* func)
 {
   se2_i_void_printf = func;
   se2_i_int_printf = NULL;
-}
-
-void se2_set_check_user_interrupt_func(se2_check_user_interrupt_func_t* func)
-{
-  se2_i_check_user_interrupt = func;
 }
 
 void se2_printf(const char* fmt, ...)
@@ -73,9 +61,4 @@ void se2_printf(const char* fmt, ...)
 void se2_puts(const char* msg)
 {
   se2_printf("%s\n", msg);
-}
-
-igraph_bool_t se2_check_user_interrupt(void)
-{
-  return se2_i_check_user_interrupt();
 }

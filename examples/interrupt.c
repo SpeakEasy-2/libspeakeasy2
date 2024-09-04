@@ -2,25 +2,21 @@
 #include <signal.h>
 #include "plot_adj.h"
 
-igraph_error_t errcode = IGRAPH_SUCCESS;
 
-static void signal_handler(int sig)
-{
-  if (sig == SIGINT) {
-    errcode = IGRAPH_INTERRUPTED;
-  }
-}
+static igraph_error_t errs[] = {
+  IGRAPH_SUCCESS,
+  IGRAPH_INTERRUPTED,
+};
 
-static igraph_bool_t check_user_interrupt(void)
+static igraph_error_t check_user_interrupt(void* data)
 {
-  return igraph_rng_get_unif01(igraph_rng_default()) > 0.3;
+  static igraph_integer_t err_idx = 0;
+  return errs[err_idx++];
 }
 
 int main()
 {
-  signal(SIGINT, signal_handler);
   igraph_set_error_handler(igraph_error_handler_printignore);
-  se2_set_check_user_interrupt_func(check_user_interrupt);
 
   igraph_t graph;
   igraph_integer_t n_nodes = 40, n_types = 4;
@@ -60,13 +56,14 @@ int main()
     .verbose = true,
   };
 
+  igraph_set_interruption_handler(check_user_interrupt);
   igraph_error_t rs;
   if ((rs = speak_easy_2( &neigh_list, &opts, &membership)) != IGRAPH_SUCCESS) {
     igraph_destroy( &graph);
     se2_neighs_destroy( &neigh_list);
     igraph_vector_int_destroy( &ground_truth);
     igraph_matrix_int_destroy( &membership);
-    return IGRAPH_SUCCESS;
+    return rs;
   };
 
   // Order nodes by ground truth community structure

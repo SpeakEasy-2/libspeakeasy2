@@ -66,9 +66,7 @@ static igraph_error_t se2_core(se2_neighs const* graph,
                                        time));
 #ifndef SE2PAR
     if ((time % 32) == 0) {
-      if (se2_check_user_interrupt()) {
-        SE2_THREAD_CHECK(IGRAPH_INTERRUPTED);
-      }
+      SE2_THREAD_CHECK(igraph_allow_interruption(NULL));
     }
 #endif
 
@@ -424,7 +422,7 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
       }
     }
 
-    if (se2_check_user_interrupt()) {
+    if (igraph_allow_interruption(NULL) != IGRAPH_SUCCESS) {
       pthread_mutex_lock( &se2_error_mutex);
       se2_thread_errorcode = IGRAPH_INTERRUPTED;
       pthread_mutex_unlock( &se2_error_mutex);
