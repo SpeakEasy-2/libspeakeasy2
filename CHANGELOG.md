@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - (breaking) use igraph's interruption handlers instead of reinventing them.
+- (breaking) use igraph's status handlers instead of creating se2 print / puts functions.
 
 ## [v0.1.7] 2024-08-18
 

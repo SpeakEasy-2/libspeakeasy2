@@ -1,10 +1,10 @@
-# Collects a minimal set of object files from igraph needed to compile
-# speakeasy 2 (SE2). This may be fragile as igraph could move where certain
-# functions are but the advantage is reducing the dependencies required to
-# build SE2, making it easier to build elsewhere. It also makes a cleaner way
-# to merge the SE2 code with the required igraph code for distribution to
-# higher level interfaces removing the need to worry about external shared
-# libs. Secondarily, it reduces compile times and final lib size.
+# Collects a minimal set of object files from igraph needed to compile speakeasy
+# 2 (SE2). This may be fragile as igraph could move where certain functions are
+# but the advantage is reducing the dependencies required to build SE2, making
+# it easier to build elsewhere. It also makes a cleaner way to merge the SE2
+# code with the required igraph code for distribution to higher level interfaces
+# removing the need to worry about external shared libs. Secondarily, it reduces
+# compile times and final lib size.
 
 # Set default symbol visibility to hidden
 set(CMAKE_C_VISIBILITY_PRESET hidden)
@@ -41,34 +41,31 @@ else()
   set(TLS_KEYWORD "")
 endif()
 
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_threading.h.in
-  ${PROJECT_BINARY_DIR}/include/igraph_threading.h
-)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_threading.h.in
+  ${PROJECT_BINARY_DIR}/include/igraph_threading.h)
 
-if (NOT GIT_FOUND)
+if(NOT GIT_FOUND)
   find_package(Git QUIET)
 endif()
 
-execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags
+execute_process(
+  COMMAND ${GIT_EXECUTABLE} describe --tags
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/igraph
   OUTPUT_VARIABLE PACKAGE_VERSION
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-if ("${PACKAGE_VERSION}" STREQUAL "")
+if("${PACKAGE_VERSION}" STREQUAL "")
   message(SEND_ERROR "Could not detect igraph version")
 endif()
 
-string(REGEX MATCH "([0-9]+)\.([0-9]+)\.([0-9]+)" IGRAPH_VERSION ${PACKAGE_VERSION})
+string(REGEX MATCH "([0-9]+)\.([0-9]+)\.([0-9]+)" IGRAPH_VERSION
+  ${PACKAGE_VERSION})
 set(PACKAGE_VERSION_MAJOR ${CMAKE_MATCH_1})
 set(PACKAGE_VERSION_MINOR ${CMAKE_MATCH_2})
 set(PACKAGE_VERSION_PATCH ${CMAKE_MATCH_3})
 
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_version.h.in
-  ${PROJECT_BINARY_DIR}/include/igraph_version.h
-)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_version.h.in
+  ${PROJECT_BINARY_DIR}/include/igraph_version.h)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(IGRAPH_INTEGER_SIZE 64)
@@ -88,9 +85,10 @@ file(GLOB cs_files ${CMAKE_CURRENT_SOURCE_DIR}/igraph/vendor/cs/*.c)
 file(GLOB pcg_files ${CMAKE_CURRENT_SOURCE_DIR}/igraph/vendor/pcg/*.c)
 file(GLOB lapack_files ${CMAKE_CURRENT_SOURCE_DIR}/igraph/vendor/lapack/*.c)
 
-add_library(igraph
-  OBJECT
+add_library(
+  igraph OBJECT
   ${igraph_core}/interruption.c
+  ${igraph_core}/statusbar.c
   ${igraph_core}/vector.c
   ${igraph_core}/memory.c
   ${igraph_core}/indheap.c
@@ -149,48 +147,38 @@ add_library(igraph
   ${f2c}/pow_di.c
   ${f2c}/s_copy.c
   ${f2c}/s_stop.c
-
   # Needed only for examples
   ${igraph_src}/games/preference.c
   ${igraph_src}/games/sbm.c
   ${igraph_src}/constructors/famous.c
   ${igraph_src}/math/safe_intop.c
-  ${igraph_src}/core/matrix_list.c
-)
+  ${igraph_src}/core/matrix_list.c)
 
-if (NOT BUILD_SHARED_LIBS)
+if(NOT BUILD_SHARED_LIBS)
   target_compile_definitions(igraph PUBLIC IGRAPH_STATIC)
 else()
   target_compile_definitions(igraph PRIVATE igraph_EXPORTS)
 endif()
 
-if (WIN32)
+if(WIN32)
   target_compile_definitions(igraph PRIVATE MSDOS)
 endif()
 
 target_link_libraries(igraph PRIVATE m)
 
 include(GenerateExportHeader)
-generate_export_header(igraph
-  STATIC_DEFINE IGRAPH_STATIC
-  EXPORT_FILE_NAME ${PROJECT_BINARY_DIR}/include/igraph_export.h
-)
+generate_export_header(igraph STATIC_DEFINE IGRAPH_STATIC EXPORT_FILE_NAME
+  ${PROJECT_BINARY_DIR}/include/igraph_export.h)
 
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/src/config.h.in
-  ${PROJECT_BINARY_DIR}/vendor/igraph/src/config.h
-)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_config.h.in
-  ${PROJECT_BINARY_DIR}/include/igraph_config.h
-)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/igraph/src/config.h.in
+  ${PROJECT_BINARY_DIR}/vendor/igraph/src/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_config.h.in
+  ${PROJECT_BINARY_DIR}/include/igraph_config.h)
 
-target_include_directories(igraph
-  PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/include
+target_include_directories(
+  igraph
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/igraph/include
   ${PROJECT_BINARY_DIR}/include
-  PRIVATE
-  ${PROJECT_BINARY_DIR}/vendor/igraph/src
+  PRIVATE ${PROJECT_BINARY_DIR}/vendor/igraph/src
   ${CMAKE_CURRENT_SOURCE_DIR}/igraph/src
-  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/vendor
-)
+  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/vendor)

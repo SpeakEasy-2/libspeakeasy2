@@ -21,14 +21,8 @@
 
 #include <igraph.h>
 
-typedef int se2_int_printf_func_t(const char*, ...);
-typedef void se2_void_printf_func_t(const char*, ...);
-
-void se2_printf(const char*, ...);
-void se2_puts(const char*);
-
-/* Only set one, this corrects for R's printf not returning an int. */
-void se2_set_int_printf_func(se2_int_printf_func_t* func);
-void se2_set_void_printf_func(se2_void_printf_func_t* func);
+#define SE2_PRINTF(fmt, ...) IGRAPH_STATUSF((fmt, NULL, __VA_ARGS__))
+#define SE2_PRINT(message) SE2_PRINTF("%s", message)
+#define SE2_PUTS(message) SE2_PRINTF("%s\n", message)
 
 #endif

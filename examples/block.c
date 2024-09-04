@@ -23,6 +23,7 @@ int main()
   signal(SIGINT, signal_handler);
   igraph_set_error_handler(igraph_error_handler_printignore);
   igraph_set_interruption_handler(check_user_interrupt);
+  igraph_set_status_handler(igraph_status_handler_stderr);
 
   igraph_t graph;
   igraph_integer_t n_nodes = 40, n_types = 4;
