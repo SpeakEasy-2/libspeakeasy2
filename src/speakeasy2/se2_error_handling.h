@@ -19,7 +19,7 @@
 #ifndef SE2_ERROR_HANDLING_H
 #define SE2_ERROR_HANDLING_H
 
-#include <igraph.h>
+#include <speak_easy_2.h>
 
 #ifdef SE2PAR
 #  include <pthread.h>

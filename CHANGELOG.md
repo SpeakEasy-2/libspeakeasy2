@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (breaking) use igraph's interruption handlers instead of reinventing them.
 - (breaking) use igraph's status handlers instead of creating se2 print / puts functions.
 
+### Fixed
+
+- Inconsistent definition of `SE2PAR` macro which ended up set differently in different files.
+
 ## [v0.1.7] 2024-08-18
 
 ### Added
