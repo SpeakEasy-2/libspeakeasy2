@@ -137,6 +137,7 @@ igraph_error_t se2_knn_graph(igraph_matrix_t *const mat,
 
   IGRAPH_CHECK(igraph_empty(res, n_cols, IGRAPH_DIRECTED));
   IGRAPH_FINALLY(igraph_destroy, res);
+
   if (weights) {
     IGRAPH_CHECK(igraph_vector_init(weights, n_edges));
     IGRAPH_FINALLY(igraph_vector_destroy, weights);
@@ -158,18 +159,19 @@ igraph_error_t se2_knn_graph(igraph_matrix_t *const mat,
                   IGRAPH_EINVAL, k, n_cols);
   }
 
-  if (weights) {
-    IGRAPH_CHECK(igraph_vector_resize(weights, n_edges));
-  }
-
   for (igraph_integer_t i = 0; i < n_cols; i++) {
     IGRAPH_CHECK(se2_closest_k(i, k, mat, &edges, weights));
   }
 
   IGRAPH_CHECK(igraph_add_edges(res, &edges, NULL));
   igraph_vector_int_destroy(&edges);
+  IGRAPH_FINALLY_CLEAN(1);
 
-  IGRAPH_FINALLY_CLEAN(3);
+  if (weights) {
+    IGRAPH_FINALLY_CLEAN(1);
+  }
+
+  IGRAPH_FINALLY_CLEAN(1);
 
   return IGRAPH_SUCCESS;
 }

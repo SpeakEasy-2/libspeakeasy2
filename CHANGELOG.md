@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Inconsistent definition of `SE2PAR` macro which ended up set differently in different files.
+- Mistake in managing the finally stack where `weights` was always getting cleaned instead of only cleaning if it existed.
 
 ## [v0.1.7] 2024-08-18
 
