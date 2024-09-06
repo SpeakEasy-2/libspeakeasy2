@@ -88,6 +88,7 @@ file(GLOB lapack_files ${CMAKE_CURRENT_SOURCE_DIR}/igraph/vendor/lapack/*.c)
 add_library(
   igraph OBJECT
   ${igraph_core}/interruption.c
+  ${igraph_core}/progress.c
   ${igraph_core}/statusbar.c
   ${igraph_core}/vector.c
   ${igraph_core}/memory.c
