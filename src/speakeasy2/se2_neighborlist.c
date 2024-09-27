@@ -37,10 +37,10 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const *graph,
     se2_neighs *neigh_list)
 {
   igraph_integer_t const n_nodes = igraph_vcount(graph);
+  igraph_bool_t directed = igraph_is_directed(graph);
 
   neigh_list->n_nodes = n_nodes;
-  neigh_list->total_weight =
-    weights ? igraph_vector_sum(weights) : igraph_ecount(graph);
+  neigh_list->total_weight = 0;
 
   neigh_list->neigh_list = igraph_malloc(sizeof(*neigh_list->neigh_list));
   IGRAPH_CHECK_OOM(neigh_list->neigh_list, "");
@@ -71,7 +71,6 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const *graph,
     neigh_list->weights = NULL;
   }
 
-  igraph_bool_t directed = igraph_is_directed(graph);
   for (igraph_integer_t eid = 0; eid < igraph_ecount(graph); eid++) {
     VECTOR(*neigh_list->sizes)[IGRAPH_FROM(graph, eid)]++;
     if (!directed) {
@@ -104,6 +103,7 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const *graph,
     if (weights) {
       igraph_vector_t *w = &VECTOR(*neigh_list->weights)[from];
       VECTOR(*w)[neigh_pos] = VECTOR(*weights)[eid];
+      neigh_list->total_weight += VECTOR(*weights)[eid];
     }
 
     VECTOR(neigh_counts)[from]++;
@@ -119,6 +119,7 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const *graph,
     if (weights) {
       igraph_vector_t *w = &VECTOR(*neigh_list->weights)[to];
       VECTOR(*w)[neigh_pos] = VECTOR(*weights)[eid];
+      neigh_list->total_weight += VECTOR(*weights)[eid];
     }
 
     VECTOR(neigh_counts)[to]++;
@@ -129,6 +130,8 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const *graph,
 
   if (weights) {
     IGRAPH_FINALLY_CLEAN(2);
+  } else {
+    neigh_list->total_weight = igraph_vector_int_sum(neigh_list->sizes);
   }
 
   IGRAPH_FINALLY_CLEAN(6);
