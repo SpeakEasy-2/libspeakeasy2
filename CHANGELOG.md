@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Ensure weights are doubled if original graph was triangular since neighbor list collects edges in both direction if undirected.
+- Calculation of skew.
 
 ## [v0.1.8] 2024-09-23
 

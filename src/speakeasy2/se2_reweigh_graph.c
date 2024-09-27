@@ -31,10 +31,10 @@ static igraph_real_t skewness(se2_neighs const *graph)
   igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_integer_t const n_edges = se2_ecount(graph);
   igraph_real_t const avg = se2_total_weight(graph) / n_edges;
-  igraph_real_t numerator = 0;
-  igraph_real_t denominator = 0;
   igraph_real_t skew = 0;
 
+  igraph_real_t numerator = 0;
+  igraph_real_t denominator = 0;
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(*graph, i); j++) {
       igraph_real_t value = WEIGHT(*graph, i, j) - avg;
@@ -43,11 +43,11 @@ static igraph_real_t skewness(se2_neighs const *graph)
       numerator += value *value_sq;
     }
   }
-  denominator = sqrt((double)denominator);
-  denominator = denominator *denominator *denominator;
+  numerator /= n_edges;
+  denominator /= n_edges;
+  denominator = sqrt(denominator *denominator *denominator);
 
-  skew = (numerator / n_edges) / denominator;
-  skew /= sqrt((double)n_edges);
+  skew = numerator / denominator;
 
   return skew;
 }
