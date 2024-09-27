@@ -33,7 +33,7 @@ of nodes from before the current time step, and a stage membership vector,
 where proposed labels are set. At the end of a time step, the staged changes
 are committed to the reference membership vector. */
 typedef struct {
-  igraph_vector_int_t *stage;     // Working membership
+  igraph_vector_int_t *stage; // Working membership
   igraph_vector_int_t *reference; // Fixed previous membership
   igraph_vector_t *label_quality; // Label quality for stage.
   igraph_integer_t n_nodes;

@@ -22,7 +22,7 @@
 #include <speak_easy_2.h>
 
 #ifdef SE2PAR
-#  include <pthread.h>
+  #include <pthread.h>
 #endif
 
 /* Threaded error handling based on igraph's allocation stack. */
@@ -30,7 +30,7 @@
 extern igraph_error_t se2_thread_errorcode;
 
 #ifdef SE2PAR
-extern pthread_mutex_t se2_error_mutex;
+  extern pthread_mutex_t se2_error_mutex;
 #endif
 
 /* Check if any thread has triggered an error. */
