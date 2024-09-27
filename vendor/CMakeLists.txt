@@ -42,7 +42,7 @@ else()
 endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_threading.h.in
-  ${PROJECT_BINARY_DIR}/include/igraph_threading.h)
+               ${PROJECT_BINARY_DIR}/include/igraph_threading.h)
 
 if(NOT GIT_FOUND)
   find_package(Git QUIET)
@@ -59,13 +59,13 @@ if("${PACKAGE_VERSION}" STREQUAL "")
 endif()
 
 string(REGEX MATCH "([0-9]+)\.([0-9]+)\.([0-9]+)" IGRAPH_VERSION
-  ${PACKAGE_VERSION})
+             ${PACKAGE_VERSION})
 set(PACKAGE_VERSION_MAJOR ${CMAKE_MATCH_1})
 set(PACKAGE_VERSION_MINOR ${CMAKE_MATCH_2})
 set(PACKAGE_VERSION_PATCH ${CMAKE_MATCH_3})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_version.h.in
-  ${PROJECT_BINARY_DIR}/include/igraph_version.h)
+               ${PROJECT_BINARY_DIR}/include/igraph_version.h)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(IGRAPH_INTEGER_SIZE 64)
@@ -87,28 +87,28 @@ file(GLOB lapack_files ${CMAKE_CURRENT_SOURCE_DIR}/igraph/vendor/lapack/*.c)
 
 add_library(
   igraph OBJECT
+  ${igraph_core}/error.c
+  ${igraph_core}/indheap.c
   ${igraph_core}/interruption.c
+  ${igraph_core}/matrix.c
+  ${igraph_core}/memory.c
+  ${igraph_core}/printing.c
   ${igraph_core}/progress.c
+  ${igraph_core}/sparsemat.c
   ${igraph_core}/statusbar.c
   ${igraph_core}/vector.c
-  ${igraph_core}/memory.c
-  ${igraph_core}/indheap.c
-  ${igraph_core}/matrix.c
-  ${igraph_core}/vector_ptr.c
   ${igraph_core}/vector_list.c
-  ${igraph_core}/printing.c
-  ${igraph_core}/error.c
-  ${igraph_core}/sparsemat.c
+  ${igraph_core}/vector_ptr.c
   ${igraph_random}/random.c
   ${igraph_random}/rng_glibc2.c
   ${igraph_random}/rng_mt19937.c
   ${igraph_random}/rng_pcg32.c
   ${igraph_random}/rng_pcg64.c
-  ${igraph_graph}/type_indexededgelist.c
+  ${igraph_graph}/attributes.c
+  ${igraph_graph}/caching.c
   ${igraph_graph}/iterators.c
   ${igraph_graph}/type_common.c
-  ${igraph_graph}/caching.c
-  ${igraph_graph}/attributes.c
+  ${igraph_graph}/type_indexededgelist.c
   ${igraph_internal}/hacks.c
   ${igraph_internal}/qsort.c
   ${igraph_internal}/qsort_r.c
@@ -150,6 +150,7 @@ add_library(
   ${f2c}/s_stop.c
   # Needed only for examples
   ${igraph_src}/games/preference.c
+  ${igraph_src}/community/modularity.c
   ${igraph_src}/games/sbm.c
   ${igraph_src}/constructors/famous.c
   ${igraph_src}/math/safe_intop.c
@@ -169,17 +170,17 @@ target_link_libraries(igraph PRIVATE m)
 
 include(GenerateExportHeader)
 generate_export_header(igraph STATIC_DEFINE IGRAPH_STATIC EXPORT_FILE_NAME
-  ${PROJECT_BINARY_DIR}/include/igraph_export.h)
+                       ${PROJECT_BINARY_DIR}/include/igraph_export.h)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/igraph/src/config.h.in
-  ${PROJECT_BINARY_DIR}/vendor/igraph/src/config.h)
+               ${PROJECT_BINARY_DIR}/vendor/igraph/src/config.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/igraph/include/igraph_config.h.in
-  ${PROJECT_BINARY_DIR}/include/igraph_config.h)
+               ${PROJECT_BINARY_DIR}/include/igraph_config.h)
 
 target_include_directories(
   igraph
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/igraph/include
-  ${PROJECT_BINARY_DIR}/include
+         ${PROJECT_BINARY_DIR}/include
   PRIVATE ${PROJECT_BINARY_DIR}/vendor/igraph/src
-  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/src
-  ${CMAKE_CURRENT_SOURCE_DIR}/igraph/vendor)
+          ${CMAKE_CURRENT_SOURCE_DIR}/igraph/src
+          ${CMAKE_CURRENT_SOURCE_DIR}/igraph/vendor)
