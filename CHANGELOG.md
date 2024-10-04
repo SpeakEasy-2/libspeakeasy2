@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ensure weights are doubled if original graph was triangular since neighbor list collects edges in both direction if undirected.
 - Calculation of skew.
 - Calculation of mean link weight.
+- Nurture stage changed to only work on subgraph containing only worst fitting nodes. Significantly improves performance on some graphs over working on entire graph.
 
 ## [v0.1.8] 2024-09-23
 

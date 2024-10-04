@@ -41,14 +41,8 @@ igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
   igraph_integer_t node_id = 0, label_id = 0;
   while ((node_id = se2_iterator_next(node_iter)) != -1) {
     while ((label_id = se2_iterator_next(&label_iter)) != -1) {
-      igraph_real_t actual = MATRIX(
-        *partition->local_labels_heard, node_id, label_id);
-      igraph_real_t expected = VECTOR(
-        *partition->global_labels_heard)[label_id];
-      igraph_real_t norm_factor = VECTOR(*graph->kin)[node_id] /
-                                  graph->total_weight;
-
-      label_specificity = actual - (norm_factor * expected);
+      label_specificity = se2_partition_score_label(
+        graph, partition, node_id, label_id);
       if ((best_label == -1) ||
           (label_specificity >= best_label_specificity)) {
         best_label_specificity = label_specificity;
@@ -60,8 +54,7 @@ igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
       n_moved_i++;
     }
 
-    se2_partition_add_to_stage(
-      partition, node_id, best_label, best_label_specificity);
+    se2_partition_add_to_stage(partition, node_id, best_label);
     best_label = -1;
     se2_iterator_shuffle(&label_iter);
   }
@@ -105,15 +98,45 @@ igraph_error_t se2_relabel_worst_nodes(se2_neighs const* graph,
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   se2_iterator node_iter;
+  igraph_vector_int_t best_fit_nodes;
+  igraph_vector_int_t best_fit_labels;
+  igraph_integer_t tmp_label = se2_partition_new_label(partition);
 
-  SE2_THREAD_CHECK(se2_iterator_k_worst_fit_nodes_init(
-    &node_iter, partition, fraction_nodes_to_label * n_nodes));
+  /* The fraction_nodes_to_label variable is used for two different meanings
+   here. Should be broken into two separate arguments. First meaning is the
+   fraction of all nodes in the graph that should be consider poor fitting.
+   Second meaning is the random fraction of poor fitting nodes to relabel. */
+  SE2_THREAD_CHECK(se2_iterator_k_worst_fit_nodes_init(&node_iter, graph,
+    partition, fraction_nodes_to_label * n_nodes, fraction_nodes_to_label,
+    &best_fit_nodes));
   IGRAPH_FINALLY(se2_iterator_destroy, &node_iter);
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &best_fit_nodes);
+
+  SE2_THREAD_CHECK(igraph_vector_int_init(
+    &best_fit_labels, igraph_vector_int_size(&best_fit_nodes)));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &best_fit_labels);
+  for (igraph_integer_t i = 0; i < igraph_vector_int_size(&best_fit_nodes);
+       i++) {
+    VECTOR(best_fit_labels)[i] = LABEL(*partition)[VECTOR(best_fit_nodes)[i]];
+    se2_partition_add_to_stage(
+      partition, VECTOR(best_fit_nodes)[i], tmp_label);
+  }
+  se2_partition_commit_changes(partition, graph);
 
   SE2_THREAD_CHECK(
     se2_find_most_specific_labels_i(graph, partition, &node_iter, NULL));
+
+  for (igraph_integer_t i = 0; i < igraph_vector_int_size(&best_fit_nodes);
+       i++) {
+    se2_partition_add_to_stage(
+      partition, VECTOR(best_fit_nodes)[i], VECTOR(best_fit_labels)[i]);
+  }
+  se2_partition_commit_changes(partition, graph);
+
+  igraph_vector_int_destroy(&best_fit_labels);
+  igraph_vector_int_destroy(&best_fit_nodes);
   se2_iterator_destroy(&node_iter);
-  IGRAPH_FINALLY_CLEAN(1);
+  IGRAPH_FINALLY_CLEAN(3);
 
   return IGRAPH_SUCCESS;
 }
@@ -127,12 +150,12 @@ igraph_error_t se2_burst_large_communities(se2_neighs const* graph,
   igraph_vector_int_t n_nodes_to_move;
   igraph_vector_int_t new_tags;
   igraph_integer_t node_id;
-  igraph_integer_t desired_community_size =
-    se2_partition_median_community_size(partition);
+  igraph_real_t desired_community_size = se2_partition_median_community_size(
+    partition);
 
   SE2_THREAD_STATUS();
-  SE2_THREAD_CHECK(se2_iterator_k_worst_fit_nodes_init(
-    &node_iter, partition, partition->n_nodes * fraction_nodes_to_move));
+  SE2_THREAD_CHECK(se2_iterator_k_worst_fit_nodes_init(&node_iter, graph,
+    partition, partition->n_nodes * fraction_nodes_to_move, 0, NULL));
   IGRAPH_FINALLY(se2_iterator_destroy, &node_iter);
 
   SE2_THREAD_CHECK(
@@ -184,10 +207,10 @@ igraph_error_t se2_burst_large_communities(se2_neighs const* graph,
     current_label = LABEL(*partition)[node_id];
     if (se2_partition_community_size(partition, current_label) >=
         min_community_size) {
-      STAGE(*partition)
-      [node_id] = VECTOR(
+      igraph_integer_t const new_label = VECTOR(
         new_tags)[RNG_INTEGER(VECTOR(n_new_tags_cum)[current_label],
         VECTOR(n_new_tags_cum)[current_label + 1] - 1)];
+      se2_partition_add_to_stage(partition, node_id, new_label);
     }
   }
 

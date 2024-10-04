@@ -27,9 +27,9 @@
 static igraph_integer_t se2_count_labels(
   igraph_vector_int_t const* membership, igraph_vector_int_t* community_sizes)
 {
-  igraph_integer_t max_label = igraph_vector_int_max(membership);
+  igraph_integer_t const max_label = igraph_vector_int_max(membership);
+  igraph_integer_t const n_nodes = igraph_vector_int_size(membership);
   igraph_integer_t n_labels = 0;
-  igraph_integer_t n_nodes = igraph_vector_int_size(membership);
 
   SE2_THREAD_CHECK_RETURN(
     igraph_vector_int_resize(community_sizes, max_label + 1), 0);
@@ -98,10 +98,6 @@ igraph_error_t se2_partition_init(se2_partition* partition,
   SE2_THREAD_CHECK_OOM(stage);
   IGRAPH_FINALLY(igraph_free, stage);
 
-  igraph_vector_t* specificity = igraph_malloc(sizeof(*specificity));
-  SE2_THREAD_CHECK_OOM(specificity);
-  IGRAPH_FINALLY(igraph_free, specificity);
-
   igraph_vector_int_t* community_sizes = igraph_malloc(
     sizeof(*community_sizes));
   SE2_THREAD_CHECK_OOM(community_sizes);
@@ -123,8 +119,6 @@ igraph_error_t se2_partition_init(se2_partition* partition,
   IGRAPH_FINALLY(igraph_vector_int_destroy, reference);
   SE2_THREAD_CHECK(igraph_vector_int_init(stage, n_nodes));
   IGRAPH_FINALLY(igraph_vector_int_destroy, stage);
-  SE2_THREAD_CHECK(igraph_vector_init(specificity, n_nodes));
-  IGRAPH_FINALLY(igraph_vector_destroy, specificity);
   SE2_THREAD_CHECK(igraph_vector_int_init(community_sizes, 0));
   IGRAPH_FINALLY(igraph_vector_int_destroy, community_sizes);
 
@@ -137,7 +131,6 @@ igraph_error_t se2_partition_init(se2_partition* partition,
   partition->n_nodes = n_nodes;
   partition->reference = reference;
   partition->stage = stage;
-  partition->label_quality = specificity;
   partition->community_sizes = community_sizes;
   partition->n_labels = n_labels;
   partition->max_label = igraph_vector_int_size(community_sizes) - 1;
@@ -156,7 +149,7 @@ igraph_error_t se2_partition_init(se2_partition* partition,
   SE2_THREAD_CHECK(se2_count_global_labels(
     graph, partition->max_label, local_labels_heard, global_labels_heard));
 
-  IGRAPH_FINALLY_CLEAN(12);
+  IGRAPH_FINALLY_CLEAN(10);
 
   return IGRAPH_SUCCESS;
 }
@@ -165,14 +158,12 @@ void se2_partition_destroy(se2_partition* partition)
 {
   igraph_vector_int_destroy(partition->reference);
   igraph_vector_int_destroy(partition->stage);
-  igraph_vector_destroy(partition->label_quality);
   igraph_vector_int_destroy(partition->community_sizes);
   igraph_matrix_destroy(partition->local_labels_heard);
   igraph_vector_destroy(partition->global_labels_heard);
 
   igraph_free(partition->reference);
   igraph_free(partition->stage);
-  igraph_free(partition->label_quality);
   igraph_free(partition->community_sizes);
   igraph_free(partition->local_labels_heard);
   igraph_free(partition->global_labels_heard);
@@ -262,9 +253,16 @@ igraph_error_t se2_iterator_random_label_init(se2_iterator* iterator,
   return IGRAPH_SUCCESS;
 }
 
+/* Returns the top n_nodes - k fitting nodes in best_fit_nodes if passed in.
+   If proportion is set to a value other than 0, only iterator over a random
+   sample of k * proportion nodes. */
 igraph_error_t se2_iterator_k_worst_fit_nodes_init(se2_iterator* iterator,
-  se2_partition const* partition, igraph_integer_t const k)
+  se2_neighs const* graph, se2_partition const* partition,
+  igraph_integer_t const k, igraph_real_t proportion,
+  igraph_vector_int_t* best_fit_nodes)
 {
+  igraph_integer_t n_iter = k;
+  igraph_vector_t label_quality;
   igraph_vector_int_t* ids = igraph_malloc(sizeof(*ids));
   SE2_THREAD_CHECK_OOM(ids);
   IGRAPH_FINALLY(igraph_free, ids);
@@ -272,17 +270,43 @@ igraph_error_t se2_iterator_k_worst_fit_nodes_init(se2_iterator* iterator,
   SE2_THREAD_CHECK(igraph_vector_int_init(ids, partition->n_nodes));
   IGRAPH_FINALLY(igraph_vector_int_destroy, ids);
 
+  SE2_THREAD_CHECK(igraph_vector_init(&label_quality, partition->n_nodes));
+  IGRAPH_FINALLY(igraph_vector_destroy, &label_quality);
+
+  for (igraph_integer_t i = 0; i < partition->n_nodes; i++) {
+    VECTOR(label_quality)
+    [i] = se2_partition_score_label(graph, partition, i, LABEL(*partition)[i]);
+  }
+
   SE2_THREAD_CHECK(
-    igraph_vector_qsort_ind(partition->label_quality, ids, IGRAPH_ASCENDING));
+    igraph_vector_qsort_ind(&label_quality, ids, IGRAPH_ASCENDING));
+  igraph_vector_destroy(&label_quality);
+  IGRAPH_FINALLY_CLEAN(1);
+
+  if (best_fit_nodes) {
+    SE2_THREAD_CHECK(
+      igraph_vector_int_init(best_fit_nodes, partition->n_nodes - k));
+    IGRAPH_FINALLY(igraph_vector_int_destroy, best_fit_nodes);
+    for (igraph_integer_t i = k; i < partition->n_nodes; i++) {
+      VECTOR(*best_fit_nodes)[i - k] = VECTOR(*ids)[i];
+    }
+  }
   SE2_THREAD_CHECK(igraph_vector_int_resize(ids, k));
 
-  SE2_THREAD_CHECK(se2_iterator_from_vector(iterator, ids, k));
+  if (proportion) {
+    n_iter *= proportion;
+  }
+
+  SE2_THREAD_CHECK(se2_iterator_from_vector(iterator, ids, n_iter));
   IGRAPH_FINALLY(se2_iterator_destroy, iterator);
 
   iterator->owns_ids = true;
   se2_iterator_shuffle(iterator);
 
   IGRAPH_FINALLY_CLEAN(3);
+  if (best_fit_nodes) {
+    IGRAPH_FINALLY_CLEAN(1);
+  }
 
   return IGRAPH_SUCCESS;
 }
@@ -325,11 +349,9 @@ igraph_integer_t se2_partition_max_label(se2_partition const* partition)
 }
 
 void se2_partition_add_to_stage(se2_partition* partition,
-  igraph_integer_t const node_id, igraph_integer_t const label,
-  igraph_real_t specificity)
+  igraph_integer_t const node_id, igraph_integer_t const label)
 {
   VECTOR(*partition->stage)[node_id] = label;
-  VECTOR(*partition->label_quality)[node_id] = specificity;
 }
 
 // Return an unused label.
@@ -658,4 +680,17 @@ igraph_error_t se2_partition_store(se2_partition const* working_partition,
   SE2_THREAD_CHECK(se2_reindex_membership(partition_state));
 
   return IGRAPH_SUCCESS;
+}
+
+igraph_real_t se2_partition_score_label(se2_neighs const* graph,
+  se2_partition const* partition, igraph_integer_t const node_id,
+  igraph_integer_t const label_id)
+{
+  igraph_real_t actual = MATRIX(
+    *partition->local_labels_heard, node_id, label_id);
+  igraph_real_t expected = VECTOR(*partition->global_labels_heard)[label_id];
+  igraph_real_t norm_factor = VECTOR(*graph->kin)[node_id] /
+                              graph->total_weight;
+
+  return actual - (norm_factor * expected);
 }
