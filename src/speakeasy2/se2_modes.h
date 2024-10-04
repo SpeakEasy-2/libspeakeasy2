@@ -39,10 +39,11 @@ typedef struct {
   igraph_bool_t is_partition_stable;
   igraph_bool_t has_partition_changed;
   igraph_bool_t bubbling_has_peaked;
+  igraph_integer_t n_bubbling_steps;
   igraph_integer_t smallest_community_to_bubble;
-  igraph_integer_t time_since_bubbling_peaked;
-  igraph_integer_t max_labels_after_bubbling;
-  igraph_integer_t labels_after_last_bubbling;
+  igraph_integer_t n_bubble_steps_since_peaking;
+  igraph_integer_t max_unique_labels_after_bubbling;
+  igraph_integer_t n_labels_after_last_bubbling;
   igraph_integer_t post_intervention_count;
   igraph_integer_t n_partitions;
   igraph_bool_t intervention_event;
@@ -50,7 +51,7 @@ typedef struct {
 
 igraph_error_t se2_tracker_init(se2_tracker* tracker, se2_options const* opts);
 void se2_tracker_destroy(se2_tracker* tracker);
-igraph_integer_t se2_tracker_mode(se2_tracker const* tracker);
+se2_mode se2_tracker_mode(se2_tracker const* tracker);
 igraph_bool_t se2_do_terminate(se2_tracker* tracker);
 igraph_bool_t se2_do_save_partition(se2_tracker* tracker);
 igraph_error_t se2_mode_run_step(se2_neighs const* graph,

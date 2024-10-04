@@ -39,11 +39,12 @@ igraph_error_t se2_tracker_init(se2_tracker* tracker, se2_options const* opts)
   tracker->max_prev_merge_threshold = 0;
   tracker->is_partition_stable = false;
   tracker->has_partition_changed = true;
+  tracker->n_bubbling_steps = 0;
   tracker->bubbling_has_peaked = false;
   tracker->smallest_community_to_bubble = opts->minclust;
-  tracker->time_since_bubbling_peaked = 0;
-  tracker->max_labels_after_bubbling = 0;
-  tracker->labels_after_last_bubbling = 0;
+  tracker->n_bubble_steps_since_peaking = 0;
+  tracker->max_unique_labels_after_bubbling = 0;
+  tracker->n_labels_after_last_bubbling = 0;
   tracker->post_intervention_count = -(opts->discard_transient);
   tracker->n_partitions = opts->target_partitions;
   tracker->intervention_event = false;
@@ -58,10 +59,7 @@ void se2_tracker_destroy(se2_tracker* tracker)
   igraph_free(tracker->time_since_last);
 }
 
-igraph_integer_t se2_tracker_mode(se2_tracker const* tracker)
-{
-  return tracker->mode;
-}
+se2_mode se2_tracker_mode(se2_tracker const* tracker) { return tracker->mode; }
 
 igraph_bool_t se2_do_terminate(se2_tracker* tracker)
 {
@@ -120,27 +118,25 @@ static void se2_post_step_hook(se2_tracker* tracker)
         tracker->bubbling_has_peaked = true;
       }
 
-        if (tracker->labels_after_last_bubbling >
-            tracker->max_labels_after_bubbling) {
-          tracker->max_labels_after_bubbling = tracker
-                                                 ->labels_after_last_bubbling;
-        }
+      if (tracker->n_labels_after_last_bubbling >
+          tracker->max_unique_labels_after_bubbling) {
+        tracker->max_unique_labels_after_bubbling =
+          tracker->n_labels_after_last_bubbling;
       }
 
       if (tracker->bubbling_has_peaked) {
-        tracker->time_since_bubbling_peaked++;
-        if (tracker->time_since_bubbling_peaked >= POST_PEAK_BUBBLE_LIMIT) {
-          tracker->time_since_bubbling_peaked = 0;
-          tracker->max_labels_after_bubbling = 0;
+        tracker->n_bubble_steps_since_peaking++;
+        if (tracker->n_bubble_steps_since_peaking >= POST_PEAK_BUBBLE_LIMIT) {
+          tracker->n_bubble_steps_since_peaking = 0;
+          tracker->max_unique_labels_after_bubbling = 0;
           tracker->n_bubbling_steps = 0;
           tracker->allowed_to_merge = true;
+          tracker->bubbling_has_peaked = false;
         }
       }
       break;
 
     case SE2_MERGE:
-      tracker->bubbling_has_peaked = false;
-
       if (tracker->is_partition_stable) {
         tracker->allowed_to_merge = false;
         tracker->post_intervention_count++;
@@ -148,6 +144,7 @@ static void se2_post_step_hook(se2_tracker* tracker)
           tracker->intervention_event = true;
         }
       }
+      break;
 
     default: // Just to "handle" all cases even though not needed.
       break;
@@ -174,7 +171,7 @@ static igraph_error_t se2_bubble_mode(
   SE2_THREAD_CHECK(se2_burst_large_communities(graph, partition,
     FRACTION_NODES_TO_BUBBLE, tracker->smallest_community_to_bubble));
 
-  tracker->labels_after_last_bubbling = partition->n_labels;
+  tracker->n_labels_after_last_bubbling = partition->n_labels;
 
   return IGRAPH_SUCCESS;
 }
