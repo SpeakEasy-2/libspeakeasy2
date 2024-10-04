@@ -61,8 +61,8 @@ static igraph_error_t se2_count_local_labels(se2_neighs const* graph,
   for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
     igraph_integer_t const label = VECTOR(*initial_labels)[node_id];
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(*graph, node_id); j++) {
-      MATRIX(*labels_heard, NEIGHBOR(*graph, node_id, j), label) += WEIGHT(
-        *graph, node_id, j);
+      MATRIX(*labels_heard, NEIGHBOR(*graph, node_id, j), label) +=
+        WEIGHT(*graph, node_id, j);
     }
   }
 
@@ -98,18 +98,18 @@ igraph_error_t se2_partition_init(se2_partition* partition,
   SE2_THREAD_CHECK_OOM(stage);
   IGRAPH_FINALLY(igraph_free, stage);
 
-  igraph_vector_int_t* community_sizes = igraph_malloc(
-    sizeof(*community_sizes));
+  igraph_vector_int_t* community_sizes =
+    igraph_malloc(sizeof(*community_sizes));
   SE2_THREAD_CHECK_OOM(community_sizes);
   IGRAPH_FINALLY(igraph_free, community_sizes);
 
-  igraph_matrix_t* local_labels_heard = igraph_malloc(
-    sizeof(*local_labels_heard));
+  igraph_matrix_t* local_labels_heard =
+    igraph_malloc(sizeof(*local_labels_heard));
   SE2_THREAD_CHECK_OOM(local_labels_heard);
   IGRAPH_FINALLY(igraph_free, local_labels_heard);
 
-  igraph_vector_t* global_labels_heard = igraph_malloc(
-    sizeof(*global_labels_heard));
+  igraph_vector_t* global_labels_heard =
+    igraph_malloc(sizeof(*global_labels_heard));
   SE2_THREAD_CHECK_OOM(global_labels_heard);
   IGRAPH_FINALLY(igraph_free, global_labels_heard);
 
@@ -357,8 +357,8 @@ void se2_partition_add_to_stage(se2_partition* partition,
 // Return an unused label.
 igraph_integer_t se2_partition_new_label(se2_partition* partition)
 {
-  igraph_integer_t pool_size = igraph_vector_int_size(
-    partition->community_sizes);
+  igraph_integer_t pool_size =
+    igraph_vector_int_size(partition->community_sizes);
   igraph_integer_t next_label = 0;
   while ((next_label < pool_size) &&
          (VECTOR(*partition->community_sizes)[next_label])) {
@@ -532,11 +532,11 @@ igraph_error_t se2_partition_relabel_mask(
 static igraph_error_t se2_partition_recount_community_sizes(
   se2_partition* partition)
 {
-  partition->n_labels = se2_count_labels(
-    partition->stage, partition->community_sizes);
+  partition->n_labels =
+    se2_count_labels(partition->stage, partition->community_sizes);
   SE2_THREAD_STATUS();
-  partition->max_label = igraph_vector_int_size(partition->community_sizes) -
-                         1;
+  partition->max_label =
+    igraph_vector_int_size(partition->community_sizes) - 1;
 
   return IGRAPH_SUCCESS;
 }
@@ -551,14 +551,14 @@ static igraph_error_t se2_resize_local_labels(se2_partition* partition,
   SE2_THREAD_CHECK(igraph_matrix_init(new_local_labels, n_nodes, n_labels));
   IGRAPH_FINALLY(igraph_matrix_destroy, new_local_labels);
 
-  igraph_integer_t const old_n_nodes = igraph_matrix_nrow(
-    partition->local_labels_heard);
-  igraph_integer_t const old_n_labels = igraph_matrix_ncol(
-    partition->local_labels_heard);
+  igraph_integer_t const old_n_nodes =
+    igraph_matrix_nrow(partition->local_labels_heard);
+  igraph_integer_t const old_n_labels =
+    igraph_matrix_ncol(partition->local_labels_heard);
   for (igraph_integer_t i = 0; i < old_n_nodes; i++) {
     for (igraph_integer_t j = 0; j < old_n_labels; j++) {
-      MATRIX(*new_local_labels, i, j) = MATRIX(
-        *partition->local_labels_heard, i, j);
+      MATRIX(*new_local_labels, i, j) =
+        MATRIX(*partition->local_labels_heard, i, j);
     }
   }
 
@@ -576,9 +576,8 @@ static igraph_error_t se2_resize_local_labels(se2_partition* partition,
 static igraph_error_t se2_move_labels_heard(
   se2_partition* partition, se2_neighs const* graph)
 {
-  igraph_integer_t old_max_label = igraph_vector_size(
-                                     partition->global_labels_heard) -
-                                   1;
+  igraph_integer_t old_max_label =
+    igraph_vector_size(partition->global_labels_heard) - 1;
   if (old_max_label < partition->max_label) {
     igraph_integer_t n_labels = partition->max_label + 1;
 
@@ -671,8 +670,8 @@ se2_partition to an igraph vector despite both arguments being
 igraph_error_t se2_partition_store(se2_partition const* working_partition,
   igraph_vector_int_list_t* partition_store, igraph_integer_t const idx)
 {
-  igraph_vector_int_t* partition_state = igraph_vector_int_list_get_ptr(
-    partition_store, idx);
+  igraph_vector_int_t* partition_state =
+    igraph_vector_int_list_get_ptr(partition_store, idx);
 
   SE2_THREAD_CHECK(
     igraph_vector_int_update(partition_state, working_partition->reference));
@@ -686,11 +685,11 @@ igraph_real_t se2_partition_score_label(se2_neighs const* graph,
   se2_partition const* partition, igraph_integer_t const node_id,
   igraph_integer_t const label_id)
 {
-  igraph_real_t actual = MATRIX(
-    *partition->local_labels_heard, node_id, label_id);
+  igraph_real_t actual =
+    MATRIX(*partition->local_labels_heard, node_id, label_id);
   igraph_real_t expected = VECTOR(*partition->global_labels_heard)[label_id];
-  igraph_real_t norm_factor = VECTOR(*graph->kin)[node_id] /
-                              graph->total_weight;
+  igraph_real_t norm_factor =
+    VECTOR(*graph->kin)[node_id] / graph->total_weight;
 
   return actual - (norm_factor * expected);
 }

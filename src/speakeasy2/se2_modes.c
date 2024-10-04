@@ -28,8 +28,8 @@
 
 igraph_error_t se2_tracker_init(se2_tracker* tracker, se2_options const* opts)
 {
-  igraph_integer_t* time_since_mode_tracker = igraph_calloc(
-    SE2_NUM_MODES, sizeof(*time_since_mode_tracker));
+  igraph_integer_t* time_since_mode_tracker =
+    igraph_calloc(SE2_NUM_MODES, sizeof(*time_since_mode_tracker));
   SE2_THREAD_CHECK_OOM(time_since_mode_tracker);
   IGRAPH_FINALLY(igraph_free, time_since_mode_tracker);
 

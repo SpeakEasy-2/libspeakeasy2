@@ -1,10 +1,10 @@
+#include "plot_adj.h"
+
 #include <igraph_interface.h>
 #include <igraph_random.h>
 #include <speak_easy_2.h>
 
-#include "plot_adj.h"
-
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
   igraph_integer_t const m = 100, n = 40, k = 8;
   igraph_integer_t const n_comms = 4;
@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
   for (igraph_integer_t i = 0; i < m; i++) {
     for (igraph_integer_t j = 0; j < n; j++) {
       MATRIX(mat, i, j) = igraph_rng_get_normal(igraph_rng_default(), 0, 1);
-      MATRIX(mat, i, j) += comm_mean_shift *VECTOR(ground_truth)[j];
+      MATRIX(mat, i, j) += comm_mean_shift * VECTOR(ground_truth)[j];
     }
   }
 

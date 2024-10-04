@@ -1,4 +1,5 @@
 #include "plot_adj.h"
+
 #include <signal.h>
 #include <speak_easy_2.h>
 
@@ -7,7 +8,7 @@ static igraph_error_t errs[] = {
   IGRAPH_INTERRUPTED,
 };
 
-static igraph_error_t check_user_interrupt(void *data)
+static igraph_error_t check_user_interrupt(void* data)
 {
   static igraph_integer_t err_idx = 0;
   return errs[err_idx++];
@@ -23,7 +24,7 @@ int main()
   se2_neighs neigh_list;
   igraph_real_t const mu = 0.25; // probability of between community edges.
   igraph_vector_t type_dist;
-  igraph_real_t type_dist_arr[] = {0.4, 0.25, 0.2, 0.15};
+  igraph_real_t type_dist_arr[] = { 0.4, 0.25, 0.2, 0.15 };
   igraph_matrix_t pref_mat;
   igraph_matrix_int_t membership;
   igraph_vector_int_t ground_truth;
@@ -42,8 +43,8 @@ int main()
     }
   }
 
-  igraph_preference_game(&graph, n_nodes, n_types, &type_dist, false, &pref_mat,
-                         &ground_truth, IGRAPH_UNDIRECTED, false);
+  igraph_preference_game(&graph, n_nodes, n_types, &type_dist, false,
+    &pref_mat, &ground_truth, IGRAPH_UNDIRECTED, false);
 
   igraph_matrix_destroy(&pref_mat);
 
@@ -77,8 +78,8 @@ int main()
 
   puts("Adjacency matrix");
   igraph_vector_int_t level_membership, level_ordering;
-  igraph_vector_int_init(&level_membership,
-                         igraph_matrix_int_ncol(&membership));
+  igraph_vector_int_init(
+    &level_membership, igraph_matrix_int_ncol(&membership));
   igraph_vector_int_init(&level_ordering, igraph_matrix_int_ncol(&ordering));
 
   igraph_matrix_int_get_row(&membership, &level_membership, 0);

@@ -160,7 +160,7 @@ ObjCBreakBeforeNestedBlockParam: true
 ObjCSpaceAfterProperty: false
 ObjCSpaceBeforeProtocolList: true
 PackConstructorInitializers: BinPack
-PenaltyBreakAssignment: 200
+PenaltyBreakAssignment: 10
 PenaltyBreakBeforeFirstCallParameter: 19
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
@@ -169,7 +169,7 @@ PenaltyBreakScopeResolution: 500
 PenaltyBreakString: 1000
 PenaltyBreakTemplateDeclaration: 10
 PenaltyExcessCharacter: 1000000
-PenaltyIndentedWhitespace: 0
+PenaltyIndentedWhitespace: 10
 PenaltyReturnTypeOnItsOwnLine: 1000
 PPIndentWidth: 1
 PointerAlignment: Left

@@ -69,13 +69,14 @@ static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const* memb,
   VECTOR(pos)[VECTOR(indices)[0]] = start;
   for (igraph_integer_t i = 1; i < n_communities; i++) {
     VECTOR(pos)
-    [VECTOR(indices)[i]] = VECTOR(pos)[VECTOR(indices)[i - 1]] +
-                           VECTOR(comm_sizes)[VECTOR(indices)[i - 1]];
+    [VECTOR(indices)[i]] =
+      VECTOR(pos)[VECTOR(indices)[i - 1]] +
+      VECTOR(comm_sizes)[VECTOR(indices)[i - 1]];
   }
 
   for (igraph_integer_t i = 0; i < len; i++) {
-    igraph_integer_t comm = MATRIX(*memb, level, VECTOR(*initial)[start + i]) -
-                            comm_min;
+    igraph_integer_t comm =
+      MATRIX(*memb, level, VECTOR(*initial)[start + i]) - comm_min;
     MATRIX(*ordering, level, VECTOR(pos)[comm]) = VECTOR(*initial)[start + i];
     VECTOR(pos)[comm]++;
   }

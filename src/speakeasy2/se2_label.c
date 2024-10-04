@@ -41,8 +41,8 @@ igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
   igraph_integer_t node_id = 0, label_id = 0;
   while ((node_id = se2_iterator_next(node_iter)) != -1) {
     while ((label_id = se2_iterator_next(&label_iter)) != -1) {
-      label_specificity = se2_partition_score_label(
-        graph, partition, node_id, label_id);
+      label_specificity =
+        se2_partition_score_label(graph, partition, node_id, label_id);
       if ((best_label == -1) ||
           (label_specificity >= best_label_specificity)) {
         best_label_specificity = label_specificity;
@@ -150,8 +150,8 @@ igraph_error_t se2_burst_large_communities(se2_neighs const* graph,
   igraph_vector_int_t n_nodes_to_move;
   igraph_vector_int_t new_tags;
   igraph_integer_t node_id;
-  igraph_real_t desired_community_size = se2_partition_median_community_size(
-    partition);
+  igraph_real_t desired_community_size =
+    se2_partition_median_community_size(partition);
 
   SE2_THREAD_STATUS();
   SE2_THREAD_CHECK(se2_iterator_k_worst_fit_nodes_init(&node_iter, graph,
@@ -238,9 +238,8 @@ static igraph_error_t se2_best_merges(se2_neighs const* graph,
   se2_partition const* partition, igraph_vector_int_t* merge_candidates,
   igraph_vector_t* modularity_change, igraph_integer_t const n_labels)
 {
-  igraph_real_t const total_weight = HASWEIGHTS(*graph) ?
-                                       se2_total_weight(graph) :
-                                       se2_ecount(graph);
+  igraph_real_t const total_weight =
+    HASWEIGHTS(*graph) ? se2_total_weight(graph) : se2_ecount(graph);
   igraph_matrix_t crosstalk;
   igraph_vector_t from_edge_probability;
   igraph_vector_t to_edge_probability;
@@ -273,11 +272,10 @@ static igraph_error_t se2_best_merges(se2_neighs const* graph,
   igraph_real_t modularity_delta;
   for (igraph_integer_t i = 0; i < n_labels; i++) {
     for (igraph_integer_t j = (i + 1); j < n_labels; j++) {
-      modularity_delta = MATRIX(crosstalk, i, j) + MATRIX(crosstalk, j, i) -
-                         (VECTOR(from_edge_probability)[i] *
-                           VECTOR(to_edge_probability)[j]) -
-                         (VECTOR(from_edge_probability)[j] *
-                           VECTOR(to_edge_probability)[i]);
+      modularity_delta =
+        MATRIX(crosstalk, i, j) + MATRIX(crosstalk, j, i) -
+        (VECTOR(from_edge_probability)[i] * VECTOR(to_edge_probability)[j]) -
+        (VECTOR(from_edge_probability)[j] * VECTOR(to_edge_probability)[i]);
 
       if (modularity_delta > VECTOR(*modularity_change)[i]) {
         VECTOR(*modularity_change)[i] = modularity_delta;
@@ -370,13 +368,13 @@ igraph_error_t se2_merge_well_connected_communities(se2_neighs const* graph,
     }
 
     VECTOR(modularity_change)
-    [i] /= (se2_partition_community_size(partition, i) +
-            se2_partition_community_size(
-              partition, VECTOR(merge_candidates)[i]));
+    [i] /=
+      (se2_partition_community_size(partition, i) +
+        se2_partition_community_size(partition, VECTOR(merge_candidates)[i]));
   }
 
-  min_merge_improvement = igraph_vector_sum(&modularity_change) /
-                          n_positive_changes;
+  min_merge_improvement =
+    igraph_vector_sum(&modularity_change) / n_positive_changes;
 
   if (min_merge_improvement < (0.5 * *max_prev_merge_threshold)) {
     goto cleanup_early;
@@ -386,8 +384,8 @@ igraph_error_t se2_merge_well_connected_communities(se2_neighs const* graph,
     *max_prev_merge_threshold = min_merge_improvement;
   }
 
-  median_modularity_change = se2_modularity_median(
-    partition, &modularity_change);
+  median_modularity_change =
+    se2_modularity_median(partition, &modularity_change);
   SE2_THREAD_STATUS();
 
   igraph_vector_bool_t merged_labels;

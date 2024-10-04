@@ -206,22 +206,24 @@ static igraph_error_t print_info(struct bootstrap_params const* p)
   if ((p->opts->verbose) && (!p->subcluster_iter)) {
     if (!greeting_printed) {
       greeting_printed = true;
-      SE2_PRINTF("Completed generating initial labels.\n"
-                 "Produced %" IGRAPH_PRId " seed labels, "
-                 "while goal was %" IGRAPH_PRId ".\n\n"
-                 "Starting level 1 clustering",
+      SE2_PRINTF(
+        "Completed generating initial labels.\n"
+        "Produced %" IGRAPH_PRId " seed labels, "
+        "while goal was %" IGRAPH_PRId ".\n\n"
+        "Starting level 1 clustering",
         *p->unique_labels, p->opts->target_clusters);
 
       if (p->opts->max_threads > 1) {
-        SE2_PUTS("; independent runs might not be displayed in order - "
-                 "that is okay...");
+        SE2_PUTS(
+          "; independent runs might not be displayed in order - "
+          "that is okay...");
       } else {
         SE2_PUTS("...");
       }
     }
 
-    SE2_PRINTF("Starting independent run #%" IGRAPH_PRId " of %" IGRAPH_PRId
-               "\n",
+    SE2_PRINTF(
+      "Starting independent run #%" IGRAPH_PRId " of %" IGRAPH_PRId "\n",
       *p->run_i + 1, p->opts->independent_runs);
   }
 #ifdef SE2PAR
@@ -332,8 +334,8 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
   se2_thread_errorcode = IGRAPH_SUCCESS;
 
   igraph_integer_t n_nodes = se2_vcount(graph);
-  igraph_integer_t n_partitions = opts->target_partitions *
-                                  opts->independent_runs;
+  igraph_integer_t n_partitions =
+    opts->target_partitions * opts->independent_runs;
   igraph_vector_int_list_t partition_store;
 
   IGRAPH_CHECK(igraph_vector_int_list_init(&partition_store, n_partitions));
@@ -554,8 +556,8 @@ static igraph_error_t se2_subgraph_from_community(se2_neighs const* origin,
     igraph_vector_int_t* neighs = &NEIGHBORS(*origin, node_id);
     igraph_vector_int_t* new_neighs = &NEIGHBORS(*subgraph, i);
     igraph_integer_t const n_neighs = N_NEIGHBORS(*origin, node_id);
-    igraph_vector_t* w = HASWEIGHTS(*subgraph) ? &WEIGHTS_IN(*subgraph, i) :
-                                                 NULL;
+    igraph_vector_t* w =
+      HASWEIGHTS(*subgraph) ? &WEIGHTS_IN(*subgraph, i) : NULL;
 
     IGRAPH_CHECK(igraph_vector_int_resize(new_neighs, n_neighs));
     if (HASWEIGHTS(*subgraph)) {
@@ -584,9 +586,8 @@ static igraph_error_t se2_subgraph_from_community(se2_neighs const* origin,
   for (igraph_integer_t i = 0; i < n_membs; i++) {
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(*subgraph, i); j++) {
       VECTOR(*subgraph->kin)
-      [NEIGHBOR(*subgraph, i, j)] += HASWEIGHTS(*subgraph) ?
-                                       WEIGHT(*subgraph, i, j) :
-                                       1;
+      [NEIGHBOR(*subgraph, i, j)] +=
+        HASWEIGHTS(*subgraph) ? WEIGHT(*subgraph, i, j) : 1;
     }
   }
   subgraph->total_weight = igraph_vector_sum(subgraph->kin);
@@ -605,8 +606,8 @@ at 0. These must be relabeled to a global scope. */
 static igraph_error_t se2_relabel_hierarchical_communities(
   igraph_vector_int_t const* prev_membs, igraph_vector_int_t* level_membs)
 {
-  igraph_integer_t const n_comms = igraph_vector_int_max(prev_membs) -
-                                   igraph_vector_int_min(prev_membs);
+  igraph_integer_t const n_comms =
+    igraph_vector_int_max(prev_membs) - igraph_vector_int_min(prev_membs);
 
   igraph_integer_t prev_max = 0;
   igraph_integer_t curr_max = 0;
@@ -617,8 +618,8 @@ static igraph_error_t se2_relabel_hierarchical_communities(
 
     for (igraph_integer_t j = 0; j < igraph_vector_int_size(&member_ids);
          j++) {
-      igraph_integer_t local_label = VECTOR(
-        *level_membs)[VECTOR(member_ids)[j]];
+      igraph_integer_t local_label =
+        VECTOR(*level_membs)[VECTOR(member_ids)[j]];
 
       VECTOR(*level_membs)[VECTOR(member_ids)[j]] += prev_max;
       if ((local_label + prev_max) > curr_max) {
@@ -656,9 +657,10 @@ igraph_error_t speak_easy_2(
 
 #ifndef SE2PAR
   if (opts->max_threads > 1) {
-    IGRAPH_WARNING("SpeakEasy 2 was not compiled with thread support. "
-                   "Ignoring `max_threads`.\n\n"
-                   "To suppress this warning do not set `max_threads`\n.");
+    IGRAPH_WARNING(
+      "SpeakEasy 2 was not compiled with thread support. "
+      "Ignoring `max_threads`.\n\n"
+      "To suppress this warning do not set `max_threads`\n.");
     opts->max_threads = 1;
   }
 #endif
@@ -683,12 +685,13 @@ igraph_error_t speak_easy_2(
     }
 
     igraph_integer_t possible_edges = se2_vcount(graph) * se2_vcount(graph);
-    igraph_real_t edge_density = (igraph_real_t)(se2_ecount(graph) -
-                                                 se2_vcount(graph)) /
-                                 (possible_edges - se2_vcount(graph));
-    SE2_PRINTF("Approximate edge density is %g.\n"
-               "Input type treated as %s.\n\n"
-               "Calling main routine at level 1.\n",
+    igraph_real_t edge_density =
+      (igraph_real_t)(se2_ecount(graph) - se2_vcount(graph)) /
+      (possible_edges - se2_vcount(graph));
+    SE2_PRINTF(
+      "Approximate edge density is %g.\n"
+      "Input type treated as %s.\n\n"
+      "Calling main routine at level 1.\n",
       edge_density, isweighted ? "weighted" : "unweighted");
   }
 
@@ -714,8 +717,8 @@ igraph_error_t speak_easy_2(
     IGRAPH_FINALLY(igraph_vector_int_destroy, &prev_memb);
     IGRAPH_CHECK(igraph_matrix_int_get_row(memb, &prev_memb, level - 1));
 
-    igraph_integer_t const n_comms = igraph_vector_int_max(&prev_memb) -
-                                     igraph_vector_int_min(&prev_memb);
+    igraph_integer_t const n_comms =
+      igraph_vector_int_max(&prev_memb) - igraph_vector_int_min(&prev_memb);
     for (igraph_integer_t comm = 0; comm < n_comms; comm++) {
       igraph_vector_int_t member_ids;
       IGRAPH_CHECK(

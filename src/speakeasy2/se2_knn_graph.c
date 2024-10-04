@@ -33,8 +33,10 @@ static void se2_insert_sim(igraph_real_t const s,
 
   igraph_integer_t bounds[2] = { 0, k };
   igraph_integer_t pos = (k - 1) / 2;
-  while (!((pos == (k - 1)) || ((s >= VECTOR(*similarities)[pos]) &&
-                                 (s < VECTOR(*similarities)[pos + 1])))) {
+  while (!(
+    (pos == (k - 1)) ||
+    ((s >= VECTOR(*similarities)[pos]) &&
+      (s < VECTOR(*similarities)[pos + 1])))) {
     if (s < VECTOR(*similarities)[pos]) {
       bounds[1] = pos;
     } else {
@@ -148,8 +150,8 @@ igraph_error_t se2_knn_graph(igraph_matrix_t* const mat,
 
   if (k >= (n_cols - 1)) {
     IGRAPH_ERRORF(
-      "The k must be less than the number of columns, " "got k = %" IGRAPH_PRId
-      " with only %" IGRAPH_PRId " columns.\n",
+      "The k must be less than the number of columns, "
+      "got k = %" IGRAPH_PRId " with only %" IGRAPH_PRId " columns.\n",
       IGRAPH_EINVAL, k, n_cols);
   }
 
