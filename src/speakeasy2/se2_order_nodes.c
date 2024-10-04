@@ -17,12 +17,13 @@
  */
 
 #include "se2_neighborlist.h"
+
 #include <speak_easy_2.h>
 
-static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const *memb,
-                                        igraph_vector_int_t *initial,
-                                        igraph_matrix_int_t *ordering, igraph_integer_t const level,
-                                        igraph_integer_t const start, igraph_integer_t const len)
+static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const* memb,
+  igraph_vector_int_t* initial, igraph_matrix_int_t* ordering,
+  igraph_integer_t const level, igraph_integer_t const start,
+  igraph_integer_t const len)
 {
   if (len == 0) {
     return IGRAPH_SUCCESS;
@@ -73,8 +74,8 @@ static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const *memb,
   }
 
   for (igraph_integer_t i = 0; i < len; i++) {
-    igraph_integer_t comm =
-      MATRIX(*memb, level, VECTOR(*initial)[start + i]) - comm_min;
+    igraph_integer_t comm = MATRIX(*memb, level, VECTOR(*initial)[start + i]) -
+                            comm_min;
     MATRIX(*ordering, level, VECTOR(pos)[comm]) = VECTOR(*initial)[start + i];
     VECTOR(pos)[comm]++;
   }
@@ -86,7 +87,8 @@ static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const *memb,
   igraph_integer_t comm_start = start;
   for (igraph_integer_t i = 0; i < n_communities; i++) {
     igraph_integer_t comm_len = VECTOR(comm_sizes)[VECTOR(indices)[i]];
-    se2_order_nodes_i(memb, initial, ordering, level + 1, comm_start, comm_len);
+    se2_order_nodes_i(
+      memb, initial, ordering, level + 1, comm_start, comm_len);
     comm_start += comm_len;
   }
   igraph_vector_int_destroy(&indices);
@@ -112,9 +114,8 @@ static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const *memb,
 
 \return Error code
 */
-igraph_error_t se2_order_nodes(se2_neighs const *graph,
-                               igraph_matrix_int_t const *memb,
-                               igraph_matrix_int_t *ordering)
+igraph_error_t se2_order_nodes(se2_neighs const* graph,
+  igraph_matrix_int_t const* memb, igraph_matrix_int_t* ordering)
 {
   igraph_integer_t const n_nodes = igraph_matrix_int_ncol(memb);
   igraph_vector_t degrees;

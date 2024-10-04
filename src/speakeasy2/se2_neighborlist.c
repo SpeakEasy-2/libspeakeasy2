@@ -17,6 +17,7 @@
  */
 
 #include "se2_neighborlist.h"
+
 #include <speak_easy_2.h>
 
 /* Convert an igraph graph to a list of neighbor lists where the ith vector
@@ -32,9 +33,8 @@
    safe to delete the graph (and it's weight vector) unless they are needed
    elsewhere.
  */
-igraph_error_t se2_igraph_to_neighbor_list(igraph_t const *graph,
-    igraph_vector_t const *weights,
-    se2_neighs *neigh_list)
+igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
+  igraph_vector_t const* weights, se2_neighs* neigh_list)
 {
   igraph_integer_t const n_nodes = igraph_vcount(graph);
   igraph_bool_t directed = igraph_is_directed(graph);
@@ -79,11 +79,11 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const *graph,
   }
 
   for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
-    igraph_vector_int_t *neighbors = &VECTOR(*neigh_list->neigh_list)[node_id];
-    IGRAPH_CHECK(igraph_vector_int_resize(neighbors,
-                                          VECTOR(*neigh_list->sizes)[node_id]));
+    igraph_vector_int_t* neighbors = &VECTOR(*neigh_list->neigh_list)[node_id];
+    IGRAPH_CHECK(igraph_vector_int_resize(
+      neighbors, VECTOR(*neigh_list->sizes)[node_id]));
     if (weights) {
-      igraph_vector_t *w = &VECTOR(*neigh_list->weights)[node_id];
+      igraph_vector_t* w = &VECTOR(*neigh_list->weights)[node_id];
       IGRAPH_CHECK(
         igraph_vector_resize(w, VECTOR(*neigh_list->sizes)[node_id]));
     }
@@ -96,12 +96,12 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const *graph,
   for (igraph_integer_t eid = 0; eid < igraph_ecount(graph); eid++) {
     igraph_integer_t const from = IGRAPH_FROM(graph, eid);
     igraph_integer_t const to = IGRAPH_TO(graph, eid);
-    igraph_vector_int_t *neighbors = &VECTOR(*neigh_list->neigh_list)[from];
+    igraph_vector_int_t* neighbors = &VECTOR(*neigh_list->neigh_list)[from];
     igraph_integer_t neigh_pos = VECTOR(neigh_counts)[from];
 
     VECTOR(*neighbors)[neigh_pos] = to;
     if (weights) {
-      igraph_vector_t *w = &VECTOR(*neigh_list->weights)[from];
+      igraph_vector_t* w = &VECTOR(*neigh_list->weights)[from];
       VECTOR(*w)[neigh_pos] = VECTOR(*weights)[eid];
       neigh_list->total_weight += VECTOR(*weights)[eid];
     }
@@ -117,7 +117,7 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const *graph,
 
     VECTOR(*neighbors)[neigh_pos] = from;
     if (weights) {
-      igraph_vector_t *w = &VECTOR(*neigh_list->weights)[to];
+      igraph_vector_t* w = &VECTOR(*neigh_list->weights)[to];
       VECTOR(*w)[neigh_pos] = VECTOR(*weights)[eid];
       neigh_list->total_weight += VECTOR(*weights)[eid];
     }
@@ -139,7 +139,7 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const *graph,
   return IGRAPH_SUCCESS;
 }
 
-void se2_neighs_destroy(se2_neighs *graph)
+void se2_neighs_destroy(se2_neighs* graph)
 {
   igraph_vector_int_list_destroy(graph->neigh_list);
   igraph_free(graph->neigh_list);
@@ -157,31 +157,28 @@ void se2_neighs_destroy(se2_neighs *graph)
 }
 
 /* Return the number of nodes in the graph represented by \p graph. */
-igraph_integer_t se2_vcount(se2_neighs const *graph)
-{
-  return graph->n_nodes;
-}
+igraph_integer_t se2_vcount(se2_neighs const* graph) { return graph->n_nodes; }
 
 /* Return the number of edges in the graph represented by \p graph. */
-igraph_integer_t se2_ecount(se2_neighs const *graph)
+igraph_integer_t se2_ecount(se2_neighs const* graph)
 {
   return igraph_vector_int_sum(graph->sizes);
 }
 
-igraph_real_t se2_total_weight(se2_neighs const *graph)
+igraph_real_t se2_total_weight(se2_neighs const* graph)
 {
   return graph->total_weight;
 }
 
-static igraph_error_t se2_strength_in_i(se2_neighs const *graph,
-                                        igraph_vector_t *degrees)
+static igraph_error_t se2_strength_in_i(
+  se2_neighs const* graph, igraph_vector_t* degrees)
 {
   IGRAPH_CHECK(igraph_vector_update(degrees, graph->kin));
   return IGRAPH_SUCCESS;
 }
 
-static igraph_error_t se2_strength_out_i(se2_neighs const *graph,
-    igraph_vector_t *degrees)
+static igraph_error_t se2_strength_out_i(
+  se2_neighs const* graph, igraph_vector_t* degrees)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
@@ -195,8 +192,8 @@ static igraph_error_t se2_strength_out_i(se2_neighs const *graph,
   return IGRAPH_SUCCESS;
 }
 
-igraph_error_t se2_strength(se2_neighs const *graph, igraph_vector_t *degrees,
-                            igraph_neimode_t mode)
+igraph_error_t se2_strength(
+  se2_neighs const* graph, igraph_vector_t* degrees, igraph_neimode_t mode)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   if (igraph_vector_size(degrees) != n_nodes) {

@@ -10,6 +10,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(SE2_PARALLEL "Process independent runs in parallel" ON)
 
+# Ensures compile-commands gets location of standard includes. Needed for Nix.
+set(CMAKE_C_STANDARD_INCLUDE_DIRECTORIES
+  ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES})
+
 find_package(Threads)
 if(SE2_PARALLEL AND NOT Threads_FOUND)
   set(SE2_PARALLEL OFF)
@@ -42,7 +46,7 @@ add_subdirectory(src/speakeasy2)
 target_compile_options(SpeakEasy2 PRIVATE -Wall -pedantic)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Sanitizer")
-  add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+  add_compile_options(-fsanitize=address -fno-omit-frame-pointer -g -O0)
   add_link_options(-fsanitize=address -fno-omit-frame-pointer)
 endif()
 

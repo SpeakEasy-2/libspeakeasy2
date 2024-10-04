@@ -17,19 +17,20 @@
  */
 
 #include "se2_seeding.h"
+
 #include "se2_error_handling.h"
 #include "se2_neighborlist.h"
 #include "se2_random.h"
 
-igraph_error_t se2_seeding(se2_neighs const *graph, se2_options const *opts,
-                           igraph_vector_int_t *ic_store,
-                           igraph_integer_t *n_unique)
+igraph_error_t se2_seeding(se2_neighs const* graph, se2_options const* opts,
+  igraph_vector_int_t* ic_store, igraph_integer_t* n_unique)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_vector_bool_t label_seen;
   igraph_integer_t n_unique_i = 0;
 
-  SE2_THREAD_CHECK(igraph_vector_bool_init(&label_seen, opts->target_clusters));
+  SE2_THREAD_CHECK(
+    igraph_vector_bool_init(&label_seen, opts->target_clusters));
   IGRAPH_FINALLY(igraph_vector_bool_destroy, &label_seen);
 
   for (igraph_integer_t i = 0; i < n_nodes; i++) {

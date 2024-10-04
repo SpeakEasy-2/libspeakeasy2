@@ -21,8 +21,7 @@
 
 #include <speak_easy_2.h>
 
-igraph_error_t se2_seeding(se2_neighs const *graph, se2_options const *opts,
-                           igraph_vector_int_t *ic_store,
-                           igraph_integer_t *n_unique);
+igraph_error_t se2_seeding(se2_neighs const* graph, se2_options const* opts,
+  igraph_vector_int_t* ic_store, igraph_integer_t* n_unique);
 
 #endif

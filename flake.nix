@@ -8,8 +8,9 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
     in {
-      devShells.${system}.default = pkgs.mkShell {
-        packages = (with pkgs; [ astyle cmake ninja gdb valgrind ]);
-      };
+      devShells.${system}.default =
+        (pkgs.mkShell.override { stdenv = pkgs.clangStdenv; }) {
+          packages = (with pkgs; [ llvm cmake ninja gdb valgrind ]);
+        };
     };
 }
