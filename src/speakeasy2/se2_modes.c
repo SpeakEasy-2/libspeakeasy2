@@ -113,11 +113,12 @@ static void se2_post_step_hook(se2_tracker* tracker)
 
   switch (tracker->mode) {
     case SE2_BUBBLE:
-      if (!tracker->bubbling_has_peaked) {
-        if ((tracker->max_labels_after_bubbling >
-              (tracker->labels_after_last_bubbling * 0.9))) {
-          tracker->bubbling_has_peaked = true;
-        }
+      tracker->n_bubbling_steps++;
+      if ((tracker->n_bubbling_steps > 2) &&
+          (tracker->max_unique_labels_after_bubbling >
+            (tracker->n_labels_after_last_bubbling * 0.9))) {
+        tracker->bubbling_has_peaked = true;
+      }
 
         if (tracker->labels_after_last_bubbling >
             tracker->max_labels_after_bubbling) {
@@ -131,6 +132,7 @@ static void se2_post_step_hook(se2_tracker* tracker)
         if (tracker->time_since_bubbling_peaked >= POST_PEAK_BUBBLE_LIMIT) {
           tracker->time_since_bubbling_peaked = 0;
           tracker->max_labels_after_bubbling = 0;
+          tracker->n_bubbling_steps = 0;
           tracker->allowed_to_merge = true;
         }
       }
