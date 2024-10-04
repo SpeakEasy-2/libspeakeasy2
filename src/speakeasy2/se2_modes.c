@@ -44,7 +44,7 @@ igraph_error_t se2_tracker_init(se2_tracker* tracker, se2_options const* opts)
   tracker->time_since_bubbling_peaked = 0;
   tracker->max_labels_after_bubbling = 0;
   tracker->labels_after_last_bubbling = 0;
-  tracker->post_intervention_count = -(opts->discard_transient) + 1;
+  tracker->post_intervention_count = -(opts->discard_transient);
   tracker->n_partitions = opts->target_partitions;
   tracker->intervention_event = false;
 
@@ -78,7 +78,7 @@ static void se2_select_mode(igraph_integer_t const time, se2_tracker* tracker)
 {
   tracker->mode = SE2_TYPICAL; // Default
 
-  if (time < 20) {
+  if (time < 19) {
     return;
   }
 

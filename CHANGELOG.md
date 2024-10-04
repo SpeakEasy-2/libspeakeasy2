@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Calculation of skew.
 - Calculation of mean link weight.
 - Nurture stage changed to only work on subgraph containing only worst fitting nodes. Significantly improves performance on some graphs over working on entire graph.
+- Previously one less than the requested number of partitions to be discarded was being discarded.
 
 ## [v0.1.8] 2024-09-23
 
