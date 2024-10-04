@@ -457,7 +457,7 @@ igraph_real_t se2_vector_int_median(igraph_vector_int_t const* vec)
   return res;
 }
 
-igraph_integer_t se2_partition_median_community_size(
+igraph_real_t se2_partition_median_community_size(
   se2_partition const* partition)
 {
   if (partition->n_labels == 1) {
@@ -466,7 +466,7 @@ igraph_integer_t se2_partition_median_community_size(
 
   igraph_vector_int_t community_sizes;
   se2_iterator label_iter;
-  igraph_integer_t res = 0;
+  igraph_real_t res = 0;
 
   SE2_THREAD_CHECK_RETURN(
     se2_iterator_random_label_init(&label_iter, partition, 0), 0);
