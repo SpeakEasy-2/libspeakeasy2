@@ -194,9 +194,9 @@ static igraph_error_t se2_add_offset(se2_neighs* graph)
   offset /= n_nodes;
 
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
+    igraph_vector_t* w = &WEIGHTS_IN(*graph, i);
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(*graph, i); j++) {
-      igraph_vector_t* w = &WEIGHTS_IN(*graph, i);
-      VECTOR(*w)[j] = ((1 - offset) * VECTOR(*w)[j]) + offset;
+      VECTOR(*w)[j] += offset;
     }
   }
 
