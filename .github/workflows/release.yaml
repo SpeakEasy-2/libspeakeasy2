@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - devel
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  checks: write
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  check-compile:
+    uses: ./.github/workflows/test_compile.yaml
+
+  check-memory:
+    uses: ./.github/workflows/memory_checks.yaml
+
+  release:
+    name: Release new packages
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_type == 'tag' }}
+    needs: [check-compile, check-memory]
+    env:
+      TAG_NAME: ${{ github.ref_name }}
+
+    steps:
+      - name: Create release name
+        run: echo RELEASE_NAME=${TAG_NAME/v/SpeakEasy2 } >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Create release notes
+        run: |
+          range=$(grep --max-count=2 --line-number "## \[" < CHANGELOG.md |\
+            cut -f 1 -d: | tr '\n' ',' | sed -n 's/,$/p\n/p')
+          sed -n $range < CHANGELOG.md | head -n-2 | tail -n+3 > release_notes.md
+          sed -i 's/###/##/g' release_notes.md
+
+      - name: Upload assets to release
+        uses: ncipollo/release-action@v1
+        with:
+          name: ${{ env.RELEASE_NAME }}
+          bodyFile: release_notes.md

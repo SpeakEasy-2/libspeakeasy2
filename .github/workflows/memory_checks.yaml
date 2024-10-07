@@ -1,16 +1,7 @@
 name: Check for memory errors using address sanitizer and valgrind
 
 on:
-  push:
-    branches:
-      - devel
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-
-permissions:
-  checks: write
-  contents: write
-  pull-requests: write
+  - workflow_call
 
 jobs:
   sanitizer:
@@ -61,7 +52,7 @@ jobs:
           sudo apt update && sudo apt upgrade
           sudo apt install cmake ninja-build gcc valgrind
 
-      - name: Build for address sanitizer
+      - name: Build for valgrind
         run: |
           cmake -B debug . -G Ninja -D CMAKE_BUILD_TYPE=Debug
           cmake --build debug

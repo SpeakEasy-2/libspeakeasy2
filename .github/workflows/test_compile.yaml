@@ -1,25 +1,12 @@
 name: Test compilation succeeds on different OSes
 
 on:
-  push:
-    branches:
-      - devel
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-
-permissions:
-  checks: write
-  contents: write
-  pull-requests: write
+  - workflow_call
 
 jobs:
-  build-windows:
-    name: Compile on Windows
-    runs-on: windows-latest
-
-    defaults:
-      run:
-        shell:  msys2 {0}
+  build-linux:
+    name: Compile on Linux
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +14,39 @@ jobs:
           submodules: true
           fetch-depth: 0
 
-      - name: Install packages
+      - name: Clone igraph
+        run: |
+          git submodule init
+          git submodule update --recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt upgrade
+          sudo apt install cmake ninja-build clang
+
+      - name: Build
+        run: |
+          CC=clang cmake -B build . -G Ninja -D CMAKE_BUILD_TYPE=Debug
+          cmake --build build
+
+      - name: Run example
+        run: build/examples/block
+
+  build-windows:
+    name: Compile on Windows
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install depenedencies
         uses: msys2/setup-msys2@v2
         with:
           msystem: ucrt64
@@ -49,6 +68,9 @@ jobs:
         run: |
           cmake -B build . -G Ninja
           cmake --build build
+
+      - name: Run example
+        run: build/examples/block
 
   build-macos:
     name: Compile on macOS
@@ -72,3 +94,6 @@ jobs:
         run: |
           cmake -B build . -G Ninja
           cmake --build build
+
+      - name: Run example
+        run: build/examples/block
