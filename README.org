@@ -11,12 +11,23 @@ At the moment, implementation performs a subset of the original MATLAB version.
 Specifically, this version does not provide confidence for node membership or overlapping community detection.
 
 * Building from source
-This package is built using CMake and uses git submodules to handle some of the dependencies.
+The easiest way to use this library is through the above mentioned high-level packages.
+They can be obtained through the languages package repository (follow the link to desired languages package for more information).
 
-To download the source, including the git submodules use:
+For using in C or to develop the library, CMake can be used to build the project.
+
+When downloading the source, be aware git submodules are used to manage some dependencies.
+In addition to the normal clone command:
 
 #+begin_src bash :eval no
-  git submodule init && git submodule update --recursive
+  git clone "https://github.com/SpeakEasy-2/libspeakeasy2"
+  cd libspeakeasy2
+#+end_src
+
+Setup the git submodules with:
+
+#+begin_src bash :eval no
+  git submodule update --init --recursive
 #+end_src
 
 Then, to build run:
@@ -32,14 +43,13 @@ To build a shared library, define ~-D BUILD_SHARED_LIBS=ON~ in the configure ste
   cmake -B build -D BUILD_SHARED_LIBS=ON .
 #+end_src
 
-If ~pthreads~ is found, the library will be compiled to run in parallel. To turn off parallel processing use the ~-D SE@_PARALLEL=OFF~ in the configure step. At run time using ~max_threads = 1~ will also turn off parallel processing.
+If ~pthreads~ is found, the library will be compiled to run in parallel. To turn off parallel processing use the ~-D SE2_PARALLEL=OFF~ in the configure step. At run time using ~max_threads = 1~ will also turn off parallel processing.
 
 * Examples
-A famous graph (in this case the Zachary karate club graph) can be used to emphasize how to call the SE2 functions.
+For a simple example, we can run SE2 on the Zachary Karate Club graph.
 
 #+begin_src C :eval no
-  #include "igraph.h"
-  #include "speak_easy_2.h"
+  #include <speak_easy_2.h>
 
   int main()
   {
@@ -48,7 +58,6 @@ A famous graph (in this case the Zachary karate club graph) can be used to empha
     igraph_vector_int_t membership;
     se2_options opts = {};
 
-    igraph_vector_int_init(&membership, 0);
     speak_easy_2(&graph, NULL, &opts, &membership);
 
     igraph_destroy(&graph);
@@ -65,9 +74,9 @@ A famous graph (in this case the Zachary karate club graph) can be used to empha
   }
 #+end_src
 
-Instead of the Zachary graph, a graph with clear community structure can specifically be generated using ~igraph~'s preference random game.
-This example is contained in an external file, [[file:examples/block.c]].
-Building the project will create an executable under `build/examples/block` that will display the resulting membership and print an ASCII representation of the adjacency matrix.
+A graph with clear community structure can be generated using ~igraph~'s preference random game.
+An example is contained in an external file, [[file:examples/block.c]].
+Building the project will create an executable under ~build/examples/block~ that will display the resulting membership and print an ASCII representation of the adjacency matrix.
 
 #+NAME: strip
 #+BEGIN_SRC elisp :var text="\e[31mHello World\e[0m" :exports none
@@ -80,72 +89,59 @@ Building the project will create an executable under `build/examples/block` that
 
 #+RESULTS:
 #+begin_src bash
-Approximate edge density is 0.27000
-Input type treated as unweighted
-Graph is symmetric
-Calling main routine at level 1
+  Approximate edge density is 0.264493.
+  Input type treated as unweighted.
 
-Completed generating initial labels
-Produced about 10 seed labels, while goal was 10
-Starting level 1 clustering; Independent runs might not be displayed in order - that is okay
-Starting independent run #1 of 10
-Starting independent run #6 of 10
-Starting independent run #8 of 10
-Starting independent run #7 of 10
-Starting independent run #3 of 10
-Starting independent run #2 of 10
-Starting independent run #5 of 10
-Starting independent run #9 of 10
-Starting independent run #4 of 10
-Starting independent run #10 of 10
+  Calling main routine at level 1.
+  Completed generating initial labels.
+  Produced 10 seed labels, while goal was 10.
 
-Generated 50 partitions at level 1
-Mean of all NMIs is 1.63486
+  Starting level 1 clustering; independent runs might not be displayed in order - that is okay...
+  Starting independent run #1 of 10
+  Starting independent run #2 of 10
+  Starting independent run #3 of 10
+  Starting independent run #4 of 10
+  Starting independent run #5 of 10
+  Starting independent run #6 of 10
+  Starting independent run #7 of 10
+  Starting independent run #8 of 10
+  Starting independent run #9 of 10
+  Starting independent run #10 of 10
 
-Membership
-[ 2 1 2 2 0 0 0 3 0 4 4 0 3 2 2 2 2 4 0 2 0 4 3 2 2 4 4 4 2 2 2 2 2 2 4 3 2 3 3 2 ]
+  Generated 50 partitions at level 1.
+  Mean of all NMIs is 0.94963.
 
-Adjacency matrix
-| - C . . C C C C C C . . C C C C C C . . . . . . . . . . . . . . . . . . . . . . |
-| C - C C C C . C C . C C C . . C C C . . * . . . . . * * . . . . . . . * . . . . |
-| . C - C C C C C . . . C C C C C C C . . . . . . * . . * . . . . . . . . . . . . |
-| . C C - C C C . C . C . . C C C . C . . . . . . . * . . . . . . . . . . . . . . |
-| C C C C - C C C C C C C C C C C C C . . . . . . . . . . . . . . . . * . . . . . |
-| C C C C C - C C C . C C . . C C . C . . . . . . . * . . . . * . . . * . . . . . |
-| C . C C C C - . C . C C C C . C . C . . . . . . . . . . . . . . . . * . . . . . |
-| C C C . C C . - C C C C C C C C C C . . . . . . . . . . . . . . . . . . . . . . |
-| C C . C C C C C - C C C C . C C C . . . . . . * . . * . . . * . . . . . . . . . |
-| C . . . C . . C C - C C C C C C C . . . . . . . . * . . . . . . . . . . . . . . |
-| . C . C C C C C C C - C C C C . C . . . * . . . . . . . . . . . . . . . . . . . |
-| . C C . C C C C C C C - . C C C C C . . . . . . . . . . . * . . . . . . . . . . |
-| C C C . C . C C C C C . - C C . C C * . . . . . . . . * . . . . . . . . * . . . |
-| C . C C C . C C . C C C C - C . C C . * . . . . . . . . . . . . . . . . . . . * |
-| C . C C C C . C C C C C C C - C . C . . . . * * . . . . . . . . . . . . . . . . |
-| C C C C C C C C C C . C . . C - C C . * . . . . . . . . . . . . . . . . . . . . |
-| C C C . C . . C C C C C C C . C - . * * . . * . . . . . . . . . * . . . . . . . |
-| C C C C C C C C . . . C C C C C . - . . . . . . * . . . * . . . . . . . . . . . |
-| . . . . . . . . . . . . * . . . * . - E E E . E E E . . . . . . . . . . . . . . |
-| . . . . . . . . . . . . . * . * * . E - E E E E . . * . . . . . . . . . . . . . |
-| . * . . . . . . . . * . . . . . . . E E - E E E . E . . . . * . . . . . * . * . |
-| . . . . . . . . . . . . . . . . . . E E E - E E E E . . . . . . . . . * . . . . |
-| . . . . . . . . . . . . . . * . * . . E E E - . . E . . * . . . . . . . . . . . |
-| . . . . . . . . * . . . . . * . . . E E E E . - E E . . . . . * . . . . . . . . |
-| . . * . . . . . . . . . . . . . . * E . . E . E - E . . . . . * . . . . . . . . |
-| . . . * . * . . . * . . . . . . . . E . E E E E E - . . . . . . . . . . . . . . |
-| . * . . . . . . * . . . . . . . . . . * . . . . . . - . * * * . . . . . * . . . |
-| . * * . . . . . . . . . * . . . . . . . . . . . . . . - A A A A A A . * . . . . |
-| . . . . . . . . . . . . . . . . . * . . . . * . . . * A - A A A A A . . . . . . |
-| . . . . . . . . . . . * . . . . . . . . . . . . . . * A A - A A A A * . . . . * |
-| . . . . . * . . * . . . . . . . . . . . * . . . . . * A A A - . A . . . . . . . |
-| . . . . . . . . . . . . . . . . . . . . . . . * * . . A A A . - A . . . . . . . |
-| . . . . . . . . . . . . . . . . * . . . . . . . . . . A A A A A - A . . . . . . |
-| . . . . . . . . . . . . . . . . . . . . . . . . . . . A A A . . A - . . . . . . |
-| . . . . * * * . . . . . . . . . . . . . . . . . . . . . . * . . . . - D D D . . |
-| . * . . . . . . . . . . . . . . . . . . . * . . . . . * . . . . . . D - . D . D |
-| . . . . . . . . . . . . * . . . . . . . * . . . . . * . . . . . . . D . - D D . |
-| . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . D D D - D D |
-| . . . . . . . . . . . . . . . . . . . . * . . . . . . . . . . . . . . . D D - D |
-| . . . . . . . . . . . . . * . . . . . . . . . . . . . . . * . . . . . D . D D - |
+  Membership
+  [ 1 1 1 1 2 2 2 3 4 4 4 4 4 4 0 0 0 0 0 0 0 0 0 0 ]
+
+  NMI against Ground truth
+  0.965428
+
+  Adjacency matrix
+  | - A A . A A A A . A * * . . . . . . . . . * . . |
+  | A - A A A A A A A . . . . . * . . . . . * . . . |
+  | A A - A A A A A A A . . . . . . . . . . . * . . |
+  | . A A - A A A A A A . . . * . . . . . . * . . . |
+  | A A A A - A A A A A * . . . . . . . . . . . . . |
+  | A A A A A - A A . A . . . . . . . . . . * . . . |
+  | A A A A A A - A A . . . . . . . . . . * . . . . |
+  | A A A A A A A - A . . . . . . . . . . . . . . . |
+  | . A A A A . A A - . . . . . . . . . . . . . . * |
+  | A . A A A A . . . - . . . . . . * . . . . . . . |
+  | * . . . * . . . . . - E . E E E . . . . . . . . |
+  | * . . . . . . . . . E - E E E . . . . . . . . . |
+  | . . . . . . . . . . . E - E E E * . . . . . . . |
+  | . . . * . . . . . . E E E - . . . . . . . . . . |
+  | . * . . . . . . . . E E E . - . . . . . . . . . |
+  | . . . . . . . . . . E . E . . - . . . . . . * . |
+  | . . . . . . . . . * . . * . . . - B B B . . . . |
+  | . . . . . . . . . . . . . . . . B - B . * . . . |
+  | . . . . . . . . . . . . . . . . B B - B . . . . |
+  | . . . . . . * . . . . . . . . . B . B - . . . . |
+  | . * . * . * . . . . . . . . . . . * . . - C C * |
+  | * . * . . . . . . . . . . . . . . . . . C - C . |
+  | . . . . . . . . . . . . . . . * . . . . C C - . |
+  | . . . . . . . . * . . . . . . . . . . . * . . - |
 #+end_src
 
 In the above adjacency matrix, the letters represent edges that are within the community represented by that letter and the asterisks represent edges between communities.
