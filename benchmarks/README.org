@@ -1,0 +1,152 @@
+#+TITLE: Comparison to the original implementation
+#+CITE_EXPORT: csl chicago-author-date.csl
+
+As mention at the top of this repository, the provided library is a port of the implementation used in the original publication.
+The primary goal of this version are first to reproduce the original as closely as possible.
+This goal, however, is contended by secondary goals:
+
+- To simplify the logic dictating the flow of the algorithm in order to
+  - Make it clearer to the reader which mode is chosen when.
+  - To ease future improvements of the algorithm.
+- To minimize memory usage.
+- To maximize speed.
+
+Due to the secondary goals, the performance between the two implementations is not identical.
+It is close though.
+
+** The Benchmarks
+To compare the implementations, the Lancichinetti-Fortunato-Raddichi (LFR) benchmarks (Lancichinetti, Fortunato, and Radicchi 2008, [[https://en.wikipedia.org/wiki/Lancichinetti%E2%80%93Fortunato%E2%80%93Radicchi_benchmark][Lancichinetti–Fortunato–Radicchi benchmark - Wikipedia]]) used in the SpeakEasy 2 publication were clustered with both methods.
+This analysis was performed in MATLAB using the original implementation and the MATLAB SE2 toolbox.
+
+The modularity of the resulting partitions were computing and stored in the [[file:se2_benchmarks.tsv]] file uploaded here along with information about each graph.
+
+R library [[https://ggplot2.tidyverse.org/index.html][ggplot]] (Wickham 2016) along with other parts of the [[https://www.tidyverse.org/][tidyverse]] were used to compare results.
+(The code used to generate the graphs is hidden in this file and can be inspected by opening this README in a text editor or viewing the "Raw" file in github.)
+
+#+begin_src R :exports none
+  library(ggplot2)
+
+  benchmarks <- readr::read_tsv("./se2_benchmarks.tsv") |>
+    dplyr::mutate(
+      num = dplyr::row_number(),
+      diff = modularity_igraph - modularity_matlab
+    )
+  modularity <- benchmarks |>
+    dplyr::select(!nmi) |>
+    tidyr::pivot_longer(
+      cols = starts_with("modularity"), names_to = "version",
+      names_prefix = "modularity_", values_to = "modularity"
+    )
+
+  density_transformer <- function(x, y, thresh, seed) {
+    function(x) {
+      set.seed(seed)
+      neighbors <- rowSums(
+        abs(
+          matrix(rep(y, each = length(y)), nrow = length(x)) -
+          matrix(rep(y, times = length(y)), nrow = length(x))
+        ) < thresh
+      )
+      x + rnorm(length(x), sd = neighbors / (5 * max(neighbors)))
+    }
+  }
+
+  PositionDensity <- ggproto("PositionDensity", Position,
+    required_aes = c("x", "y"),
+    setup_params = function(self, data) {
+      list(
+        thresh = self$thresh,
+        seed = self$seed,
+        y = data$y
+      )
+    },
+    compute_layer = function(data, params, panal) {
+      x_transformer <- density_transformer(x, params$y, params$thresh, params$seed)
+      transform_position(df = data, trans_x = x_transformer)
+    }
+  )
+
+  position_density <- function(thresh = 0.1, seed = sample(1:9999, 1)) {
+    ggproto(NULL, PositionDensity, thresh = thresh, seed = seed)
+  }
+#+end_src
+
+The first figure generated compares the distribution of modularity across all graphs.
+
+#+begin_src R :exports none
+ggplot(modularity) +
+  geom_density(aes(x = modularity, fill = version, color = version, after_stat(density)),
+    position = "identity", alpha = 0.1, n = 1024
+  ) +
+  facet_grid(cols = vars(nNodes), labeller = function(x) {
+    purrr::map_df(x, ~ paste(.x, "nodes"))
+  })
+ggsave("modularity_dist.png")
+#+end_src
+
+#+ATTR_HTML: :width 600
+[[./modularity_dist.png]]
+
+This shows the overall pattern is similar between the two methods.
+There is a noticeable dip in the igraph (this) version around a modularity of 0.25.
+The missing volume is added to the second peak around a modularity 0.4.
+As a whole, the distribution of the igraph version has slightly higher modularity.
+
+Based on this figure, the results between the two methods are similar, but the above figure discards the information about the exact graph being clustered.
+A second figure below shows a different view of the distribution of the graphs giving more information about how their clustering of individual graphs compare.
+
+#+begin_src R :exports none
+  jitterer <- position_density(thresh = 0.05, seed = 1234)
+  ggplot(modularity) +
+    geom_boxplot(aes(x = version, y = modularity)) +
+    geom_path(
+      aes(
+        x = version, y = modularity,
+        group = num, color = diff,
+        alpha = (abs(diff) + 0.2) / max((abs(diff) + 0.2))
+      ),
+      position = jitterer
+    ) +
+    geom_point(aes(x = version, y = modularity, group = num), position = jitterer) +
+    scale_color_gradient2() +
+    labs(alpha = "Magnitude\nDifference", color = "Modularity\nDifference") +
+    facet_grid(cols = vars(nNodes), labeller = function(x) {
+      purrr::map_df(x, ~ paste(.x, "nodes"))
+    })
+  ggsave("modularity_pairs.png")
+#+end_src
+
+#+ATTR_HTML: :width 600
+[[./modularity_pairs.png]]
+
+In this figure, each dot represents the modularity of a single graph and lines link the performance between the two implementations.
+Darker lines represent those with a greater difference between the two implementations (note the "Magnitude Difference" in the key is a scaled value to make the lines clearer and not the true magnitude of the difference).
+Anywhere lines aren't visible, the modularity calculated was similar.
+Reiterating what was seen in the previous figure, on most graphs the modularity is comparable but on some of the graphs the original implementation didn't perform well on, this implementation was able to cluster much better.
+
+Lastly, we can look at the normalized mutual information (NMI) between partitions produced by each implementation.
+
+#+begin_src R :exports none
+  ggplot(nmi) +
+    geom_histogram(aes(x = nmi, after_stat(count)), binwidth = 0.04) +
+    facet_grid(cols = vars(nNodes), labeller = function(x) {
+      purrr::map_df(x, ~ paste(.x, "nodes"))
+    })
+  ggsave("nmi_dist.png")
+#+end_src
+
+#+ATTR_HTML: :width 600
+[[./nmi_dist.png]]
+
+NMI is a way to compare how similar two partitions are without taking into account the arbitrary labels given to the communities.
+A NMI of 1 means the partitions are equivalent.
+
+The bulk of the NMIs are near or at 1 and drop off until a value less than about 0.75 is rare.
+
+** References
+Lancichinetti, Andrea, Santo Fortunato, and Filippo Radicchi. 2008.
+“Benchmark Graphs for Testing Community Detection Algorithms.”
+Physical Review E/ 78 (4): 046110.
+<https://doi.org/10.1103/physreve.78.046110>.
+
+Wickham, Hadley. 2016. "ggplot2: Elegant Graphics for Data Analysis." Springer-Verlag New York.
