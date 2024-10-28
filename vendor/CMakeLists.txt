@@ -48,14 +48,18 @@ if(NOT GIT_FOUND)
   find_package(Git QUIET)
 endif()
 
-execute_process(
-  COMMAND ${GIT_EXECUTABLE} describe --tags
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/igraph
-  OUTPUT_VARIABLE PACKAGE_VERSION
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(GIT_FOUND)
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} describe --tags
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/igraph
+    OUTPUT_VARIABLE PACKAGE_VERSION
+    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
 
 if("${PACKAGE_VERSION}" STREQUAL "")
-  message(SEND_ERROR "Could not detect igraph version")
+  # Value isn't actually used. Only needed since igraph.h imports
+  # igraph_version.h.
+  set(PACKAGE_VERSION "0.0.0")
 endif()
 
 string(REGEX MATCH "([0-9]+)\.([0-9]+)\.([0-9]+)" IGRAPH_VERSION

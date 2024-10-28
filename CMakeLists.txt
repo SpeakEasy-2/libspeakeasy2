@@ -23,19 +23,18 @@ if("${CMAKE_PACKAGE_VERSION}" STREQUAL "")
     find_package(Git QUIET)
   endif()
 
-  execute_process(
-    COMMAND ${GIT_EXECUTABLE} describe --tags
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-    OUTPUT_VARIABLE CMAKE_PACKAGE_VERSION
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(GIT_FOUND)
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} describe --tags
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+      OUTPUT_VARIABLE CMAKE_PACKAGE_VERSION
+      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+  endif()
 endif()
 
 if("${CMAKE_PACKAGE_VERSION}" STREQUAL "")
   set(CMAKE_PACKAGE_VERSION "NOTFOUND")
 endif()
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/se2_version.h.in
-  ${CMAKE_CURRENT_BINARY_DIR}/include/se2_version.h)
 
 message(STATUS "${PROJECT_NAME} version: ${CMAKE_PACKAGE_VERSION}")
 add_subdirectory(src/speakeasy2)
