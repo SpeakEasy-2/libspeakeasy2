@@ -10,7 +10,7 @@
     in {
       devShells.${system}.default =
         (pkgs.mkShell.override { stdenv = pkgs.clangStdenv; }) {
-          packages = (with pkgs; [ llvm cmake ninja gdb valgrind ]);
+          packages = (with pkgs; [ llvm clang-tools cmake ninja gdb valgrind ]);
         };
     };
 }
