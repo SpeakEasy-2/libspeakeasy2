@@ -117,7 +117,7 @@ static void se2_knn_fill_edges(igraph_vector_int_t* edges,
   a matrix. Compares columns using the inverse of euclidean distance.
 
 \param mat the matrix containing the columns to compare.
-\param k number of edges per column to make (must be >= 1 and < ncols - 1).
+\param k number of edges per column to make (must be >= 0 and < ncols - 1).
 \param res the resulting graph (uninitialized).
 \param weights, if not NULL the similarity (inverse euclidean distance) will be
   stored here for each edge.
@@ -134,26 +134,31 @@ igraph_error_t se2_knn_graph(igraph_matrix_t* const mat,
   IGRAPH_CHECK(igraph_empty(res, n_cols, IGRAPH_DIRECTED));
   IGRAPH_FINALLY(igraph_destroy, res);
 
-  if (weights) {
-    IGRAPH_CHECK(igraph_vector_init(weights, n_edges));
-    IGRAPH_FINALLY(igraph_vector_destroy, weights);
-  }
-
-  IGRAPH_CHECK(igraph_vector_int_init(&edges, 2 * n_edges));
-  IGRAPH_FINALLY(igraph_vector_int_destroy, &edges);
-  se2_knn_fill_edges(&edges, k, n_cols);
-
-  if (k < 1) {
-    IGRAPH_ERRORF("The k must be at least 1 but got %" IGRAPH_PRId ".\n",
+  if (k < 0) {
+    IGRAPH_ERRORF("The k must be at least 0 but got %" IGRAPH_PRId ".\n",
       IGRAPH_EINVAL, k);
   }
 
-  if (k >= (n_cols - 1)) {
+  if (k >= n_cols) {
     IGRAPH_ERRORF(
       "The k must be less than the number of columns, "
       "got k = %" IGRAPH_PRId " with only %" IGRAPH_PRId " columns.\n",
       IGRAPH_EINVAL, k, n_cols);
   }
+
+  if (weights) {
+    IGRAPH_CHECK(igraph_vector_init(weights, n_edges));
+    IGRAPH_FINALLY(igraph_vector_destroy, weights);
+  }
+
+  if (k == 0) {
+    // Return empty graph.
+    goto finish;
+  }
+
+  IGRAPH_CHECK(igraph_vector_int_init(&edges, 2 * n_edges));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &edges);
+  se2_knn_fill_edges(&edges, k, n_cols);
 
   for (igraph_integer_t i = 0; i < n_cols; i++) {
     IGRAPH_CHECK(se2_closest_k(i, k, mat, &edges, weights));
@@ -163,6 +168,7 @@ igraph_error_t se2_knn_graph(igraph_matrix_t* const mat,
   igraph_vector_int_destroy(&edges);
   IGRAPH_FINALLY_CLEAN(1);
 
+finish:
   if (weights) {
     IGRAPH_FINALLY_CLEAN(1);
   }
