@@ -25,12 +25,16 @@ jobs:
           sudo apt install cmake ninja-build clang
 
       - name: Build for address sanitizer
-        run: |
-          CC=clang cmake -B sanitizer . -G Ninja -D CMAKE_BUILD_TYPE=Sanitizer
-          cmake --build sanitizer
+        run: CC=clang make asan
 
-      - name: Test
-        run: sanitizer/examples/weighted_block
+      - name: Test block
+        run: asan/examples/block
+
+      - name: Test weighted block
+        run: asan/examples/weighted_block
+
+      - name: Test interrupt
+        run: asan/examples/interrupt
 
   valgrind:
     name: Check with valgrind
@@ -53,18 +57,13 @@ jobs:
           sudo apt install cmake ninja-build gcc valgrind
 
       - name: Build for valgrind
-        run: |
-          cmake -B debug . -G Ninja -D CMAKE_BUILD_TYPE=Debug
-          cmake --build debug
+        run: make debug
 
       - name: unweighted
-        run: |
-          valgrind --track-origins=yes --leak-check=full debug/examples/block
+        run: make valgrind-block
 
       - name: weighted
-        run: |
-          valgrind --track-origins=yes --leak-check=full debug/examples/weighted_block
+        run: make valgrind-weighted_block
 
       - name: interrupted
-        run: |
-          valgrind --track-origins=yes --leak-check=full debug/examples/interrupt
+        run: make valgrind-interrupt
