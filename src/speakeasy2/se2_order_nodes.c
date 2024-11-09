@@ -64,7 +64,7 @@ static igraph_error_t se2_order_nodes_i(igraph_matrix_int_t const* memb,
   IGRAPH_CHECK(igraph_vector_int_init(&indices, n_communities));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &indices);
   IGRAPH_CHECK(
-    igraph_vector_int_qsort_ind(&comm_sizes, &indices, IGRAPH_DESCENDING));
+    igraph_vector_int_sort_ind(&comm_sizes, &indices, IGRAPH_DESCENDING));
 
   VECTOR(pos)[VECTOR(indices)[0]] = start;
   for (igraph_integer_t i = 1; i < n_communities; i++) {
@@ -136,7 +136,7 @@ igraph_error_t se2_order_nodes(se2_neighs const* graph,
   IGRAPH_FINALLY(igraph_vector_int_destroy, &init_ordering);
 
   IGRAPH_CHECK(
-    igraph_vector_qsort_ind(&degrees, &init_ordering, IGRAPH_DESCENDING));
+    igraph_vector_sort_ind(&degrees, &init_ordering, IGRAPH_DESCENDING));
 
   se2_order_nodes_i(memb, &init_ordering, ordering, 0, 0, n_nodes);
 

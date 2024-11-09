@@ -279,7 +279,7 @@ igraph_error_t se2_iterator_k_worst_fit_nodes_init(se2_iterator* iterator,
   }
 
   SE2_THREAD_CHECK(
-    igraph_vector_qsort_ind(&label_quality, ids, IGRAPH_ASCENDING));
+    igraph_vector_sort_ind(&label_quality, ids, IGRAPH_ASCENDING));
   igraph_vector_destroy(&label_quality);
   IGRAPH_FINALLY_CLEAN(1);
 
@@ -419,7 +419,7 @@ igraph_real_t se2_vector_median(igraph_vector_t const* vec)
   SE2_THREAD_CHECK_RETURN(igraph_vector_int_init(&ids, len), 0);
   IGRAPH_FINALLY(igraph_vector_int_destroy, &ids);
   SE2_THREAD_CHECK_RETURN(
-    igraph_vector_qsort_ind(vec, &ids, IGRAPH_ASCENDING), 0);
+    igraph_vector_sort_ind(vec, &ids, IGRAPH_ASCENDING), 0);
   res = VECTOR(*vec)[VECTOR(ids)[k]];
 
   if (len % 2) {
@@ -443,7 +443,7 @@ igraph_real_t se2_vector_int_median(igraph_vector_int_t const* vec)
   SE2_THREAD_CHECK_RETURN(igraph_vector_int_init(&ids, len), 0);
   IGRAPH_FINALLY(igraph_vector_int_destroy, &ids);
   SE2_THREAD_CHECK_RETURN(
-    igraph_vector_int_qsort_ind(vec, &ids, IGRAPH_ASCENDING), 0);
+    igraph_vector_int_sort_ind(vec, &ids, IGRAPH_ASCENDING), 0);
   res = VECTOR(*vec)[VECTOR(ids)[k]];
 
   if (len % 2) {
@@ -643,7 +643,7 @@ static igraph_error_t se2_reindex_membership(igraph_vector_int_t* membership)
   IGRAPH_FINALLY(igraph_vector_int_destroy, &indices);
 
   SE2_THREAD_CHECK(
-    igraph_vector_int_qsort_ind(membership, &indices, IGRAPH_ASCENDING));
+    igraph_vector_int_sort_ind(membership, &indices, IGRAPH_ASCENDING));
 
   igraph_integer_t c_old, c_new = -1, c_prev_node = -1;
   for (igraph_integer_t i = 0; i < n_nodes; i++) {

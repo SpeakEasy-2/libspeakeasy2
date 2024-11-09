@@ -396,7 +396,7 @@ igraph_error_t se2_merge_well_connected_communities(se2_neighs const* graph,
   SE2_THREAD_CHECK(igraph_vector_int_init(&sort_index, max_label + 1));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &sort_index);
 
-  SE2_THREAD_CHECK(igraph_vector_qsort_ind(
+  SE2_THREAD_CHECK(igraph_vector_sort_ind(
     &modularity_change, &sort_index, IGRAPH_DESCENDING));
 
   if (VECTOR(modularity_change)[VECTOR(sort_index)[0]] <=
