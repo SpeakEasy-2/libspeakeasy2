@@ -16,6 +16,8 @@
  * with SpeakEasy 2. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "igraph_random.h"
+
 #include <speak_easy_2.h>
 #include <unistd.h>
 
@@ -253,6 +255,7 @@ static void* se2_thread_bootstrap(void* parameters)
     igraph_vector_int_t ic_store;
 
     old_rng = se2_rng_init(&rng, run_i + p->opts->random_seed);
+    IGRAPH_FINALLY(igraph_rng_set_default, old_rng);
     IGRAPH_FINALLY(igraph_rng_destroy, &rng);
 
     SE2_THREAD_CHECK_RETURN(
@@ -282,8 +285,9 @@ static void* se2_thread_bootstrap(void* parameters)
     SE2_THREAD_CHECK_RETURN(
       se2_core(p->graph, p->partition_store, partition_offset, p->opts), NULL);
 
-    se2_rng_restore(&rng, old_rng);
-    IGRAPH_FINALLY_CLEAN(1);
+    igraph_rng_set_default(old_rng);
+    igraph_rng_destroy(&rng);
+    IGRAPH_FINALLY_CLEAN(2);
 
 #ifdef SE2PAR
     struct timespec pause = {

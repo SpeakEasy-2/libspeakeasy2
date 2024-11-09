@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Allow k == 0 and k == (vcount - 1) for KNN graph.
 
+### Fixed
+
+- Reset old rng on exit.
+
 ## [v0.1.9] 2024-10-07
 
 ### Fixed
