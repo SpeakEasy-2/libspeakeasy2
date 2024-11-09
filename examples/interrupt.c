@@ -1,3 +1,4 @@
+#include "igraph_error.h"
 #include "igraph_interface.h"
 
 #include <speak_easy_2.h>
@@ -20,7 +21,7 @@ int main(void)
   igraph_set_status_handler(igraph_status_handler_stderr);
 
   igraph_t graph;
-  igraph_integer_t n_nodes = 40, n_types = 4;
+  igraph_integer_t n_nodes = 200, n_types = 4;
   se2_neighs neigh_list;
   igraph_real_t const mu = 0.25; // probability of between community edges.
   igraph_vector_t type_dist;
@@ -61,5 +62,5 @@ int main(void)
   igraph_matrix_int_destroy(&membership);
   se2_neighs_destroy(&neigh_list);
 
-  return rs == IGRAPH_INTERRUPTED;
+  return rs == IGRAPH_INTERRUPTED ? IGRAPH_SUCCESS : IGRAPH_FAILURE;
 }
