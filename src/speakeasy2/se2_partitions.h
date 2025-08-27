@@ -56,9 +56,6 @@ igraph_error_t se2_partition_init(se2_partition* partition,
 void se2_partition_destroy(se2_partition* partition);
 igraph_error_t se2_partition_store(se2_partition const* working_partition,
   igraph_vector_int_list_t* partition_store, igraph_integer_t const index);
-igraph_real_t se2_partition_score_label(se2_neighs const* graph,
-  se2_partition const* partition, igraph_integer_t const node_id,
-  igraph_integer_t const label_id);
 
 igraph_error_t se2_iterator_from_vector(
   se2_iterator* iter, igraph_vector_int_t* ids, igraph_integer_t n_iter);

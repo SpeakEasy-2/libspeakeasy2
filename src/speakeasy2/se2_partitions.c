@@ -53,15 +53,15 @@ static igraph_error_t se2_count_local_labels(se2_neighs const* graph,
   igraph_integer_t const n_nodes = igraph_vector_int_size(initial_labels);
   igraph_integer_t const n_labels = max_label + 1;
 
-  if ((igraph_matrix_nrow(labels_heard) != n_nodes) ||
-      igraph_matrix_ncol(labels_heard) != n_labels) {
-    SE2_THREAD_CHECK(igraph_matrix_resize(labels_heard, n_nodes, n_labels));
+  if ((igraph_matrix_ncol(labels_heard) != n_nodes) ||
+      igraph_matrix_nrow(labels_heard) != n_labels) {
+    SE2_THREAD_CHECK(igraph_matrix_resize(labels_heard, n_labels, n_nodes));
   }
 
   for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
     igraph_integer_t const label = VECTOR(*initial_labels)[node_id];
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(*graph, node_id); j++) {
-      MATRIX(*labels_heard, NEIGHBOR(*graph, node_id, j), label) +=
+      MATRIX(*labels_heard, label, NEIGHBOR(*graph, node_id, j)) +=
         WEIGHT(*graph, node_id, j);
     }
   }
@@ -80,7 +80,7 @@ static igraph_error_t se2_count_global_labels(se2_neighs const* graph,
   }
 
   SE2_THREAD_CHECK(
-    igraph_matrix_colsum(local_labels_heard, global_labels_heard));
+    igraph_matrix_rowsum(local_labels_heard, global_labels_heard));
 
   return IGRAPH_SUCCESS;
 }
@@ -138,7 +138,7 @@ igraph_error_t se2_partition_init(se2_partition* partition,
   partition->global_labels_heard = global_labels_heard;
 
   SE2_THREAD_CHECK(
-    igraph_matrix_init(local_labels_heard, n_nodes, partition->max_label + 1));
+    igraph_matrix_init(local_labels_heard, partition->max_label + 1, n_nodes));
   IGRAPH_FINALLY(igraph_matrix_destroy, local_labels_heard);
   SE2_THREAD_CHECK(
     igraph_vector_init(global_labels_heard, partition->max_label + 1));
@@ -253,6 +253,19 @@ igraph_error_t se2_iterator_random_label_init(se2_iterator* iterator,
   return IGRAPH_SUCCESS;
 }
 
+inline igraph_real_t score_label_i(se2_neighs const* graph,
+  se2_partition const* partition, igraph_integer_t const node_id,
+  igraph_integer_t const label_id)
+{
+  igraph_real_t actual =
+    MATRIX(*partition->local_labels_heard, label_id, node_id);
+  igraph_real_t expected = VECTOR(*partition->global_labels_heard)[label_id];
+  igraph_real_t norm_factor =
+    VECTOR(*graph->kin)[node_id] / graph->total_weight;
+
+  return actual - (norm_factor * expected);
+}
+
 /* Returns the top n_nodes - k fitting nodes in best_fit_nodes if passed in.
    If proportion is set to a value other than 0, only iterator over a random
    sample of k * proportion nodes. */
@@ -275,7 +288,7 @@ igraph_error_t se2_iterator_k_worst_fit_nodes_init(se2_iterator* iterator,
 
   for (igraph_integer_t i = 0; i < partition->n_nodes; i++) {
     VECTOR(label_quality)
-    [i] = se2_partition_score_label(graph, partition, i, LABEL(*partition)[i]);
+    [i] = score_label_i(graph, partition, i, LABEL(*partition)[i]);
   }
 
   SE2_THREAD_CHECK(
@@ -548,17 +561,17 @@ static igraph_error_t se2_resize_local_labels(se2_partition* partition,
   SE2_THREAD_CHECK_OOM(new_local_labels);
   IGRAPH_FINALLY(igraph_free, new_local_labels);
 
-  SE2_THREAD_CHECK(igraph_matrix_init(new_local_labels, n_nodes, n_labels));
+  SE2_THREAD_CHECK(igraph_matrix_init(new_local_labels, n_labels, n_nodes));
   IGRAPH_FINALLY(igraph_matrix_destroy, new_local_labels);
 
   igraph_integer_t const old_n_nodes =
-    igraph_matrix_nrow(partition->local_labels_heard);
-  igraph_integer_t const old_n_labels =
     igraph_matrix_ncol(partition->local_labels_heard);
+  igraph_integer_t const old_n_labels =
+    igraph_matrix_nrow(partition->local_labels_heard);
   for (igraph_integer_t i = 0; i < old_n_nodes; i++) {
     for (igraph_integer_t j = 0; j < old_n_labels; j++) {
-      MATRIX(*new_local_labels, i, j) =
-        MATRIX(*partition->local_labels_heard, i, j);
+      MATRIX(*new_local_labels, j, i) =
+        MATRIX(*partition->local_labels_heard, j, i);
     }
   }
 
@@ -591,7 +604,7 @@ static igraph_error_t se2_move_labels_heard(
       se2_resize_local_labels(partition, partition->n_nodes, n_labels));
     for (igraph_integer_t i = 0; i < partition->n_nodes; i++) {
       for (igraph_integer_t j = old_max_label + 1; j < n_labels; j++) {
-        MATRIX(*partition->local_labels_heard, i, j) = 0;
+        MATRIX(*partition->local_labels_heard, j, i) = 0;
       }
     }
   }
@@ -613,10 +626,10 @@ static igraph_error_t se2_move_labels_heard(
     VECTOR(*partition->global_labels_heard)[new_label] += acc;
 
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(*graph, node_id); j++) {
-      MATRIX(*partition->local_labels_heard, NEIGHBOR(*graph, node_id, j),
-        old_label) -= WEIGHT(*graph, node_id, j);
-      MATRIX(*partition->local_labels_heard, NEIGHBOR(*graph, node_id, j),
-        new_label) += WEIGHT(*graph, node_id, j);
+      MATRIX(*partition->local_labels_heard, old_label,
+        NEIGHBOR(*graph, node_id, j)) -= WEIGHT(*graph, node_id, j);
+      MATRIX(*partition->local_labels_heard, new_label,
+        NEIGHBOR(*graph, node_id, j)) += WEIGHT(*graph, node_id, j);
     }
   }
 
@@ -679,17 +692,4 @@ igraph_error_t se2_partition_store(se2_partition const* working_partition,
   SE2_THREAD_CHECK(se2_reindex_membership(partition_state));
 
   return IGRAPH_SUCCESS;
-}
-
-igraph_real_t se2_partition_score_label(se2_neighs const* graph,
-  se2_partition const* partition, igraph_integer_t const node_id,
-  igraph_integer_t const label_id)
-{
-  igraph_real_t actual =
-    MATRIX(*partition->local_labels_heard, node_id, label_id);
-  igraph_real_t expected = VECTOR(*partition->global_labels_heard)[label_id];
-  igraph_real_t norm_factor =
-    VECTOR(*graph->kin)[node_id] / graph->total_weight;
-
-  return actual - (norm_factor * expected);
 }

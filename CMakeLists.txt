@@ -46,6 +46,7 @@ target_compile_options(
   SpeakEasy2
   PRIVATE -Wall
   -pedantic
+  -march=native
   $<$<CONFIG:Release>:-O3>
   $<$<CONFIG:Sanitizer>:-fsanitize=address
   -fno-omit-frame-pointer

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allow k == 0 and k == (vcount - 1) for KNN graph.
 - Upgrade igraph to 0.10.16.
 - Replace `qsort` with `sort` since `qsort` was deprecated by igraph.
+- Optimize label scoring for significant speed improvement.
 
 ### Fixed
 
