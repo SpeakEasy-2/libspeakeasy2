@@ -36,9 +36,24 @@ if("${CMAKE_PACKAGE_VERSION}" STREQUAL "")
   set(CMAKE_PACKAGE_VERSION "NOTFOUND")
 endif()
 
+if("${CMAKE_BUILD_TYPE}" STREQUAL "")
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 message(STATUS "${PROJECT_NAME} version: ${CMAKE_PACKAGE_VERSION}")
 add_subdirectory(src/speakeasy2)
-target_compile_options(SpeakEasy2 PRIVATE -Wall -pedantic)
+target_compile_options(
+  SpeakEasy2
+  PRIVATE -Wall
+  -pedantic
+  $<$<CONFIG:Release>:-O3>
+  $<$<CONFIG:Sanitizer>:-fsanitize=address
+  -fno-omit-frame-pointer
+  -g
+  -O0>
+  $<$<CONFIG:Profile>:-pg>)
+target_link_options(SpeakEasy2 PRIVATE $<$<CONFIG:Sanitizer>:-fsanitize=address
+  -fno-omit-frame-pointer> $<$<CONFIG:Profile>:-pg>)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Sanitizer")
   add_compile_options(-fsanitize=address -fno-omit-frame-pointer -g -O0)
