@@ -36,6 +36,9 @@ if("${CMAKE_PACKAGE_VERSION}" STREQUAL "")
   set(CMAKE_PACKAGE_VERSION "NOTFOUND")
 endif()
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/se2_version.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/se2_version.h)
+
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE "Release")
 endif()

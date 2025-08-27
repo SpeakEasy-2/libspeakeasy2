@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Bring back `se2_version.h`. Not sure why this got deleted but it's needed for downstream packages.
+
 ### Changed
 
 - Allow k == 0 and k == (vcount - 1) for KNN graph.
