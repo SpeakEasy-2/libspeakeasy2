@@ -253,7 +253,7 @@ igraph_error_t se2_iterator_random_label_init(se2_iterator* iterator,
   return IGRAPH_SUCCESS;
 }
 
-inline igraph_real_t score_label_i(se2_neighs const* graph,
+igraph_real_t score_label_i(se2_neighs const* graph,
   se2_partition const* partition, igraph_integer_t const node_id,
   igraph_integer_t const label_id)
 {
