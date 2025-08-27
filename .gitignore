@@ -2,3 +2,5 @@ build/
 dist/
 debug/
 asan/
+profile/
+gmon.out
