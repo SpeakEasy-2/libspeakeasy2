@@ -6,7 +6,7 @@ on:
 jobs:
   sanitizer:
     name: Check Address Sanitizer
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
 
   valgrind:
     name: Check with valgrind
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
