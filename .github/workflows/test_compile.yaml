@@ -87,9 +87,6 @@ jobs:
           git submodule init
           git submodule update --recursive
 
-      - name: Install dependencies
-        run: brew install ninja
-
       - name: Build from source
         run: |
           cmake -B build . -G Ninja
