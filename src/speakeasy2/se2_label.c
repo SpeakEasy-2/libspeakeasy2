@@ -29,7 +29,7 @@
 igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
   se2_partition* partition, se2_iterator* node_iter, igraph_integer_t* n_moved)
 {
-  igraph_integer_t const n_labels = partition->n_labels;
+  igraph_integer_t const n_labels = partition->max_label + 1;
   igraph_vector_t* const global_heard = partition->global_labels_heard;
   igraph_matrix_t* const local_heard = partition->local_labels_heard;
   igraph_vector_t* const kin = graph->kin;
@@ -43,6 +43,18 @@ igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
     igraph_real_t norm_factor = VECTOR(*kin)[node_id] * total_weight_inv;
 
     for (igraph_integer_t label_id = 0; label_id < n_labels; label_id++) {
+      /* NOTE: Because used label IDs are not necessarily contiguous, we need *
+      to loop over more iterations than labels actually used. This busts * some
+      of the compiler optimizations since we are no longer moving over * the
+      local heard matrix and global heard vector 1 element at a time. It's
+      possible repacking the labels (being careful to reorder all the label
+      based cached values)at partition commit time could improve speed since
+      this is a very hot loop. In this case n_labels becomes
+      partition->n_labels and we no longer need to check the community size is
+      non-zero.*/
+      if (VECTOR(*partition->community_sizes)[label_id] == 0) {
+        continue;
+      }
       igraph_real_t const actual = MATRIX(*local_heard, label_id, node_id);
       igraph_real_t const expected = VECTOR(*global_heard)[label_id];
       igraph_real_t const score = actual - (norm_factor * expected);
