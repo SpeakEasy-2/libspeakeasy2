@@ -611,7 +611,7 @@ static igraph_error_t se2_relabel_hierarchical_communities(
   igraph_vector_int_t const* prev_membs, igraph_vector_int_t* level_membs)
 {
   igraph_integer_t const n_comms =
-    igraph_vector_int_max(prev_membs) - igraph_vector_int_min(prev_membs);
+    igraph_vector_int_max(prev_membs) - igraph_vector_int_min(prev_membs) + 1;
 
   igraph_integer_t prev_max = 0;
   igraph_integer_t curr_max = 0;
@@ -722,7 +722,8 @@ igraph_error_t speak_easy_2(
     IGRAPH_CHECK(igraph_matrix_int_get_row(memb, &prev_memb, level - 1));
 
     igraph_integer_t const n_comms =
-      igraph_vector_int_max(&prev_memb) - igraph_vector_int_min(&prev_memb);
+      igraph_vector_int_max(&prev_memb) - igraph_vector_int_min(&prev_memb) +
+      1;
     for (igraph_integer_t comm = 0; comm < n_comms; comm++) {
       igraph_vector_int_t member_ids;
       IGRAPH_CHECK(

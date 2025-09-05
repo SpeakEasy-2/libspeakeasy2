@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Iterate over all communities when scoring labels. Since labels are not always contiguous, this often requires the label score for loop to go beyond the first `n_labels` indices.
+- Number of communities calculation was max - min instead of max - min + 1 so the largest community was not getting sub-clustered properly.
 
 ## [v0.1.10] 2025-08-27
 
