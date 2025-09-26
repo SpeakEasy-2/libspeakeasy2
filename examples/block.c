@@ -14,11 +14,9 @@ static void signal_handler(int sig)
   }
 }
 
-static igraph_error_t check_user_interrupt(void* data)
+static igraph_bool_t check_user_interrupt(void)
 {
-  IGRAPH_UNUSED(data);
-
-  return errcode;
+  return errcode == IGRAPH_INTERRUPTED;
 }
 
 int main(void)
@@ -46,7 +44,7 @@ int main(void)
   }
 
   // Generate a graph with clear community structure
-  igraph_vector_view(&type_dist, type_dist_arr, n_types);
+  type_dist = igraph_vector_view(type_dist_arr, n_types);
   igraph_vector_int_init(&ground_truth, 0);
 
   igraph_matrix_init(&pref_mat, n_types, n_types);
@@ -81,7 +79,7 @@ int main(void)
   };
 
   // Order nodes by ground truth community structure
-  igraph_matrix_int_view_from_vector(&gt_membership, &ground_truth, 1);
+  gt_membership = igraph_matrix_int_view_from_vector(&ground_truth, 1);
   se2_order_nodes(&neigh_list, &gt_membership, &ordering);
 
   // Display results

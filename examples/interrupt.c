@@ -1,15 +1,16 @@
 #include "igraph_error.h"
 #include "igraph_interface.h"
+#include "igraph_types.h"
 
 #include <speak_easy_2.h>
 
-static igraph_error_t errs[] = {
-  IGRAPH_SUCCESS,
-  IGRAPH_SUCCESS,
-  IGRAPH_INTERRUPTED,
+static igraph_bool_t errs[] = {
+  false,
+  false,
+  true,
 };
 
-static igraph_error_t check_user_interrupt(void* data)
+static igraph_bool_t check_user_interrupt(void)
 {
   static igraph_integer_t err_idx = 0;
   return errs[err_idx++];
@@ -31,7 +32,7 @@ int main(void)
   igraph_error_t rs;
 
   // Generate a graph with clear community structure
-  igraph_vector_view(&type_dist, type_dist_arr, n_types);
+  type_dist = igraph_vector_view(type_dist_arr, n_types);
 
   igraph_matrix_init(&pref_mat, n_types, n_types);
   igraph_real_t p_in = 1 - mu, p_out = mu / (n_types - 1);

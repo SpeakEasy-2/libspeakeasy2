@@ -20,7 +20,7 @@ int main(void)
   igraph_matrix_int_t ordering;
 
   // Generate a graph with clear community structure
-  igraph_vector_view(&type_dist, type_dist_arr, n_types);
+  type_dist = igraph_vector_view(type_dist_arr, n_types);
   igraph_vector_int_init(&ground_truth, 0);
 
   igraph_matrix_init(&pref_mat, n_types, n_types);
@@ -58,7 +58,7 @@ int main(void)
 
   speak_easy_2(&neigh_list, &opts, &membership);
 
-  igraph_matrix_int_view_from_vector(&gt_membership, &ground_truth, 1);
+  gt_membership = igraph_matrix_int_view_from_vector(&ground_truth, 1);
   se2_order_nodes(&neigh_list, &gt_membership, &ordering);
   igraph_vector_int_destroy(&ground_truth);
 

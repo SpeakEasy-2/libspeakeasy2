@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
   };
 
   speak_easy_2(&neigh_list, &opts, &membership);
-  igraph_matrix_int_view_from_vector(&gt_membership, &ground_truth, 1);
+  gt_membership = igraph_matrix_int_view_from_vector(&ground_truth, 1);
   se2_order_nodes(&neigh_list, &gt_membership, &ordering);
   igraph_vector_int_destroy(&ground_truth);
 

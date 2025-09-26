@@ -417,7 +417,7 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
       }
     }
 
-    if (igraph_allow_interruption(NULL) != IGRAPH_SUCCESS) {
+    if (igraph_allow_interruption()) {
       pthread_mutex_lock(&se2_error_mutex);
       se2_thread_errorcode = IGRAPH_INTERRUPTED;
       pthread_mutex_unlock(&se2_error_mutex);

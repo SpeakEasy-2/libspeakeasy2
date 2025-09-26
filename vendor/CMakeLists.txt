@@ -100,6 +100,7 @@ add_library(
   ${igraph_core}/progress.c
   ${igraph_core}/sparsemat.c
   ${igraph_core}/statusbar.c
+  ${igraph_core}/strvector.c
   ${igraph_core}/vector.c
   ${igraph_core}/vector_list.c
   ${igraph_core}/vector_ptr.c
