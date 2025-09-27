@@ -19,6 +19,8 @@
 #ifndef SE2_PARTITIONS_H
 #define SE2_PARTITIONS_H
 
+#include "igraph_types.h"
+
 #include <speak_easy_2.h>
 
 // LABEL(partition)[node_id] gets the reference label for the node.
@@ -38,9 +40,8 @@ typedef struct {
   igraph_integer_t n_nodes;
   igraph_integer_t n_labels;
   igraph_vector_int_t* community_sizes;
-  igraph_integer_t max_label;
-  igraph_matrix_t* local_labels_heard;
   igraph_vector_t* global_labels_heard;
+  igraph_bool_t repack;
 } se2_partition;
 
 typedef struct {
@@ -75,8 +76,6 @@ void se2_iterator_destroy(se2_iterator* iterator);
 
 igraph_integer_t se2_partition_n_nodes(se2_partition const* partition);
 igraph_integer_t se2_partition_n_labels(se2_partition const* partition);
-igraph_integer_t se2_partition_max_label(se2_partition const* partition);
-igraph_integer_t se2_partition_new_label(se2_partition* partition);
 igraph_integer_t se2_partition_community_size(
   se2_partition const* partition, igraph_integer_t const label);
 igraph_real_t se2_partition_median_community_size(
@@ -87,8 +86,6 @@ igraph_real_t se2_vector_int_median(igraph_vector_int_t const* vec);
 
 void se2_partition_merge_labels(
   se2_partition* partition, igraph_integer_t c1, igraph_integer_t c2);
-igraph_error_t se2_partition_relabel_mask(
-  se2_partition* partition, igraph_vector_bool_t const* mask);
 void se2_partition_add_to_stage(se2_partition* partition,
   igraph_integer_t const node_id, igraph_integer_t const label);
 igraph_error_t se2_partition_commit_changes(

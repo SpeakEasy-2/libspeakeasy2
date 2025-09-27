@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update to igraph 1.0.0
+- Remove `local_labels_heard` cache in partition to reduce memory usage when `n_labels` is close to `n_nodes` (also improves speed).
 
 ## [v0.1.11] 2025-09-04
 

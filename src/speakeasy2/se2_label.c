@@ -18,6 +18,8 @@
 
 #include "se2_label.h"
 
+#include "igraph_error.h"
+#include "igraph_vector.h"
 #include "se2_error_handling.h"
 #include "se2_neighborlist.h"
 
@@ -29,11 +31,14 @@
 igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
   se2_partition* partition, se2_iterator* node_iter, igraph_integer_t* n_moved)
 {
-  igraph_integer_t const n_labels = partition->max_label + 1;
+  igraph_integer_t const n_labels = partition->n_labels;
   igraph_vector_t* const global_heard = partition->global_labels_heard;
-  igraph_matrix_t* const local_heard = partition->local_labels_heard;
   igraph_vector_t* const kin = graph->kin;
   igraph_real_t const total_weight_inv = 1 / graph->total_weight;
+
+  igraph_vector_t local_heard;
+  SE2_THREAD_CHECK(igraph_vector_init(&local_heard, n_labels));
+  IGRAPH_FINALLY(igraph_vector_destroy, &local_heard);
 
   igraph_integer_t n_moved_i = 0;
   igraph_integer_t node_id = 0;
@@ -42,20 +47,15 @@ igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
     igraph_integer_t best_label = -1;
     igraph_real_t norm_factor = VECTOR(*kin)[node_id] * total_weight_inv;
 
+    igraph_vector_null(&local_heard);
+    for (igraph_integer_t i = 0; i < N_NEIGHBORS(*graph, node_id); i++) {
+      VECTOR(local_heard)
+      [LABEL(*partition)[NEIGHBOR(*graph, node_id, i)]] +=
+        WEIGHT(*graph, node_id, i);
+    }
+
     for (igraph_integer_t label_id = 0; label_id < n_labels; label_id++) {
-      /* NOTE: Because used label IDs are not necessarily contiguous, we need *
-      to loop over more iterations than labels actually used. This busts * some
-      of the compiler optimizations since we are no longer moving over * the
-      local heard matrix and global heard vector 1 element at a time. It's
-      possible repacking the labels (being careful to reorder all the label
-      based cached values)at partition commit time could improve speed since
-      this is a very hot loop. In this case n_labels becomes
-      partition->n_labels and we no longer need to check the community size is
-      non-zero.*/
-      if (VECTOR(*partition->community_sizes)[label_id] == 0) {
-        continue;
-      }
-      igraph_real_t const actual = MATRIX(*local_heard, label_id, node_id);
+      igraph_real_t const actual = VECTOR(local_heard)[label_id];
       igraph_real_t const expected = VECTOR(*global_heard)[label_id];
       igraph_real_t const score = actual - (norm_factor * expected);
 
@@ -77,6 +77,9 @@ igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
   if (n_moved) {
     *n_moved = n_moved_i;
   }
+
+  igraph_vector_destroy(&local_heard);
+  IGRAPH_FINALLY_CLEAN(1);
 
   return IGRAPH_SUCCESS;
 }
@@ -110,7 +113,9 @@ igraph_error_t se2_relabel_worst_nodes(se2_neighs const* graph,
   se2_iterator node_iter;
   igraph_vector_int_t best_fit_nodes;
   igraph_vector_int_t best_fit_labels;
-  igraph_integer_t tmp_label = se2_partition_new_label(partition);
+  igraph_integer_t tmp_label = partition->n_labels; // Unused label.
+
+  partition->repack = false;
 
   /* The fraction_nodes_to_label variable is used for two different meanings
    here. Should be broken into two separate arguments. First meaning is the
@@ -141,6 +146,7 @@ igraph_error_t se2_relabel_worst_nodes(se2_neighs const* graph,
     se2_partition_add_to_stage(
       partition, VECTOR(best_fit_nodes)[i], VECTOR(best_fit_labels)[i]);
   }
+  partition->repack = true;
   se2_partition_commit_changes(partition, graph);
 
   igraph_vector_int_destroy(&best_fit_labels);
@@ -155,10 +161,11 @@ igraph_error_t se2_burst_large_communities(se2_neighs const* graph,
   se2_partition* partition, igraph_real_t const fraction_nodes_to_move,
   igraph_integer_t const min_community_size)
 {
+  igraph_integer_t const n_labels = partition->n_labels;
+
   se2_iterator node_iter;
   igraph_vector_int_t n_new_tags_cum;
   igraph_vector_int_t n_nodes_to_move;
-  igraph_vector_int_t new_tags;
   igraph_integer_t node_id;
   igraph_real_t desired_community_size =
     se2_partition_median_community_size(partition);
@@ -168,12 +175,10 @@ igraph_error_t se2_burst_large_communities(se2_neighs const* graph,
     partition, partition->n_nodes * fraction_nodes_to_move, 0, NULL));
   IGRAPH_FINALLY(se2_iterator_destroy, &node_iter);
 
-  SE2_THREAD_CHECK(
-    igraph_vector_int_init(&n_new_tags_cum, partition->max_label + 2));
+  SE2_THREAD_CHECK(igraph_vector_int_init(&n_new_tags_cum, n_labels + 1));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &n_new_tags_cum);
 
-  SE2_THREAD_CHECK(
-    igraph_vector_int_init(&n_nodes_to_move, partition->max_label + 1));
+  SE2_THREAD_CHECK(igraph_vector_int_init(&n_nodes_to_move, n_labels));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &n_nodes_to_move);
 
   while ((node_id = se2_iterator_next(&node_iter)) != -1) {
@@ -184,7 +189,7 @@ igraph_error_t se2_burst_large_communities(se2_neighs const* graph,
   }
 
   igraph_integer_t n_new_tags;
-  for (igraph_integer_t i = 0; i <= partition->max_label; i++) {
+  for (igraph_integer_t i = 0; i < n_labels; i++) {
     if (VECTOR(n_nodes_to_move)[i] == 0) {
       continue;
     }
@@ -199,17 +204,8 @@ igraph_error_t se2_burst_large_communities(se2_neighs const* graph,
     VECTOR(n_new_tags_cum)[i + 1] = n_new_tags;
   }
 
-  for (igraph_integer_t i = 0; i <= partition->max_label; i++) {
+  for (igraph_integer_t i = 0; i < n_labels; i++) {
     VECTOR(n_new_tags_cum)[i + 1] += VECTOR(n_new_tags_cum)[i];
-  }
-
-  n_new_tags = VECTOR(n_new_tags_cum)[partition->max_label + 1];
-
-  SE2_THREAD_CHECK(igraph_vector_int_init(&new_tags, n_new_tags));
-  IGRAPH_FINALLY(igraph_vector_int_destroy, &new_tags);
-  for (igraph_integer_t i = 0; i < n_new_tags; i++) {
-    VECTOR(new_tags)[i] = se2_partition_new_label(partition);
-    SE2_THREAD_STATUS();
   }
 
   igraph_integer_t current_label;
@@ -217,18 +213,18 @@ igraph_error_t se2_burst_large_communities(se2_neighs const* graph,
     current_label = LABEL(*partition)[node_id];
     if (se2_partition_community_size(partition, current_label) >=
         min_community_size) {
-      igraph_integer_t const new_label = VECTOR(
-        new_tags)[RNG_INTEGER(VECTOR(n_new_tags_cum)[current_label],
-        VECTOR(n_new_tags_cum)[current_label + 1] - 1)];
+      igraph_integer_t const new_label =
+        n_labels +
+        RNG_INTEGER(VECTOR(n_new_tags_cum)[current_label],
+          VECTOR(n_new_tags_cum)[current_label + 1] - 1);
       se2_partition_add_to_stage(partition, node_id, new_label);
     }
   }
 
-  igraph_vector_int_destroy(&new_tags);
   igraph_vector_int_destroy(&n_nodes_to_move);
   igraph_vector_int_destroy(&n_new_tags_cum);
   se2_iterator_destroy(&node_iter);
-  IGRAPH_FINALLY_CLEAN(4);
+  IGRAPH_FINALLY_CLEAN(3);
 
   SE2_THREAD_CHECK(se2_partition_commit_changes(partition, graph));
 
@@ -346,7 +342,8 @@ igraph_error_t se2_merge_well_connected_communities(se2_neighs const* graph,
   se2_partition* partition, igraph_real_t* max_prev_merge_threshold,
   igraph_bool_t* is_partition_stable)
 {
-  igraph_integer_t max_label = se2_partition_max_label(partition);
+  igraph_integer_t const n_labels = partition->n_labels;
+
   igraph_vector_int_t merge_candidates;
   igraph_vector_t modularity_change;
   igraph_real_t min_merge_improvement;
@@ -354,15 +351,15 @@ igraph_error_t se2_merge_well_connected_communities(se2_neighs const* graph,
   igraph_integer_t n_positive_changes = 0;
   igraph_integer_t n_merges = 0;
 
-  SE2_THREAD_CHECK(igraph_vector_int_init(&merge_candidates, max_label + 1));
+  SE2_THREAD_CHECK(igraph_vector_int_init(&merge_candidates, n_labels));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &merge_candidates);
-  SE2_THREAD_CHECK(igraph_vector_init(&modularity_change, max_label + 1));
+  SE2_THREAD_CHECK(igraph_vector_init(&modularity_change, n_labels));
   IGRAPH_FINALLY(igraph_vector_destroy, &modularity_change);
 
   SE2_THREAD_CHECK(se2_best_merges(
-    graph, partition, &merge_candidates, &modularity_change, max_label + 1));
+    graph, partition, &merge_candidates, &modularity_change, n_labels));
 
-  for (igraph_integer_t i = 0; i <= max_label; i++) {
+  for (igraph_integer_t i = 0; i < n_labels; i++) {
     if (VECTOR(modularity_change)[i] > 0) {
       n_positive_changes++;
     }
@@ -372,7 +369,7 @@ igraph_error_t se2_merge_well_connected_communities(se2_neighs const* graph,
     goto cleanup_early;
   }
 
-  for (igraph_integer_t i = 0; i <= max_label; i++) {
+  for (igraph_integer_t i = 0; i < n_labels; i++) {
     if (VECTOR(merge_candidates)[i] == -1) {
       continue;
     }
@@ -401,9 +398,9 @@ igraph_error_t se2_merge_well_connected_communities(se2_neighs const* graph,
   igraph_vector_bool_t merged_labels;
   igraph_vector_int_t sort_index;
 
-  SE2_THREAD_CHECK(igraph_vector_bool_init(&merged_labels, max_label + 1));
+  SE2_THREAD_CHECK(igraph_vector_bool_init(&merged_labels, n_labels));
   IGRAPH_FINALLY(igraph_vector_bool_destroy, &merged_labels);
-  SE2_THREAD_CHECK(igraph_vector_int_init(&sort_index, max_label + 1));
+  SE2_THREAD_CHECK(igraph_vector_int_init(&sort_index, n_labels));
   IGRAPH_FINALLY(igraph_vector_int_destroy, &sort_index);
 
   SE2_THREAD_CHECK(igraph_vector_sort_ind(
@@ -416,7 +413,7 @@ igraph_error_t se2_merge_well_connected_communities(se2_neighs const* graph,
 
   igraph_integer_t c1, c2;
   igraph_real_t delta;
-  for (igraph_integer_t i = 0; i <= max_label; i++) {
+  for (igraph_integer_t i = 0; i < n_labels; i++) {
     c1 = VECTOR(sort_index)[i];
     c2 = VECTOR(merge_candidates)[c1];
     delta = VECTOR(modularity_change)[c1];
