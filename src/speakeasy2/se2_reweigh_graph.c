@@ -115,7 +115,7 @@ static igraph_error_t se2_collect_sparse_diagonal(
 }
 
 static igraph_error_t se2_weigh_diagonal(
-  se2_neighs* graph, igraph_bool_t is_skewed)
+  se2_neighs* graph, igraph_bool_t is_skewed, igraph_bool_t verbose)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_vector_int_t diagonal_edges;
@@ -140,8 +140,10 @@ static igraph_error_t se2_weigh_diagonal(
   IGRAPH_FINALLY(igraph_vector_destroy, &diagonal_weights);
 
   if (is_skewed) {
-    SE2_PUTS(
-      "High skew to edge weight distribution; reweighing main diagonal.");
+    if (verbose) {
+      SE2_PUTS(
+        "High skew to edge weight distribution; reweighing main diagonal.");
+    }
     IGRAPH_CHECK(se2_mean_link_weight(graph, &diagonal_weights));
   } else {
     igraph_vector_fill(&diagonal_weights, 1);
@@ -192,12 +194,14 @@ static void se2_reweigh_i(se2_neighs* graph)
   graph->total_weight /= max_magnitude_weight;
 }
 
-static igraph_error_t se2_add_offset(se2_neighs* graph)
+static igraph_error_t se2_add_offset(se2_neighs* graph, igraph_bool_t verbose)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
   igraph_real_t offset = 0;
 
-  SE2_PUTS("adding very small offset to all edges");
+  if (verbose) {
+    SE2_PUTS("adding very small offset to all edges");
+  }
 
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(*graph, i); j++) {
@@ -254,15 +258,15 @@ void se2_recalc_degrees(se2_neighs* graph)
   }
 }
 
-igraph_error_t se2_reweigh(se2_neighs* graph)
+igraph_error_t se2_reweigh(se2_neighs* graph, igraph_bool_t verbose)
 {
   igraph_bool_t is_skewed = skewness(graph) >= 2;
 
   se2_reweigh_i(graph);
-  IGRAPH_CHECK(se2_weigh_diagonal(graph, is_skewed));
+  IGRAPH_CHECK(se2_weigh_diagonal(graph, is_skewed, verbose));
 
   if ((is_skewed) && (!se2_vector_list_has_negatives(graph))) {
-    se2_add_offset(graph);
+    se2_add_offset(graph, verbose);
   }
 
   se2_recalc_degrees(graph);

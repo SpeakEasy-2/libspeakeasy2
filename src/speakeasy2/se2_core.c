@@ -687,7 +687,7 @@ igraph_error_t speak_easy_2(
   }
 #endif
 
-  IGRAPH_CHECK(se2_reweigh(graph));
+  IGRAPH_CHECK(se2_reweigh(graph, opts->verbose));
 
   if (opts->verbose) {
     igraph_bool_t isweighted = false;
@@ -767,7 +767,7 @@ igraph_error_t speak_easy_2(
       IGRAPH_CHECK(se2_subgraph_from_community(graph, &subgraph, &member_ids));
       IGRAPH_FINALLY(se2_neighs_destroy, &subgraph);
 
-      IGRAPH_CHECK(se2_reweigh(&subgraph));
+      IGRAPH_CHECK(se2_reweigh(&subgraph, /* verbose */ false));
       IGRAPH_CHECK(se2_bootstrap(&subgraph, level, opts, &subgraph_memb));
 
       for (igraph_integer_t i = 0; i < igraph_vector_int_size(&subgraph_memb);
