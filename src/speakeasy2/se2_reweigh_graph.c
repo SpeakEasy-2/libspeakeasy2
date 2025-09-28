@@ -72,31 +72,27 @@ static igraph_error_t se2_mean_link_weight(
   return IGRAPH_SUCCESS;
 }
 
-static igraph_error_t se2_weigh_diagonal(
-  se2_neighs* graph, igraph_bool_t is_skewed)
+static igraph_error_t se2_collect_sparse_diagonal(
+  se2_neighs* graph, igraph_vector_int_t* diag)
 {
   igraph_integer_t const n_nodes = se2_vcount(graph);
-  igraph_vector_int_t diagonal_edges;
-
-  IGRAPH_CHECK(igraph_vector_int_init(&diagonal_edges, n_nodes));
-  IGRAPH_FINALLY(igraph_vector_int_destroy, &diagonal_edges);
   for (igraph_integer_t i = 0; i < n_nodes; i++) {
     igraph_bool_t found_edge = false;
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(*graph, i); j++) {
       if (NEIGHBOR(*graph, i, j) == i) {
         if (found_edge) { // Already found a diagonal.
           igraph_vector_int_remove(&NEIGHBORS(*graph, i), j);
-          N_NEIGHBORS(*graph, i)--;
+          VECTOR(*graph->sizes)[i]--;
           if (HASWEIGHTS(*graph)) {
             igraph_vector_remove(&WEIGHTS_IN(*graph, i), j);
           }
         } else {
           found_edge = true;
-          VECTOR(diagonal_edges)[i] = j;
+          VECTOR(*diag)[i] = j;
+          /* Importantly set to 0 so diagonal weights don't impact
+             calculation of mean link weight if skewed. Diagonal weights will
+             be written over anyway. */
           if (HASWEIGHTS(*graph)) {
-            /* Importantly set to 0 so diagonal weights don't impact
-               calculation of mean link weight if skewed. Diagonal weights will
-               be written over anyway. */
             igraph_vector_t* w = &WEIGHTS_IN(*graph, i);
             VECTOR(*w)[j] = 0;
           }
@@ -106,12 +102,32 @@ static igraph_error_t se2_weigh_diagonal(
 
     if (!found_edge) {
       IGRAPH_CHECK(igraph_vector_int_push_back(&NEIGHBORS(*graph, i), i));
-      VECTOR(diagonal_edges)[i] = N_NEIGHBORS(*graph, i)++;
+      VECTOR(*diag)[i] = VECTOR(*graph->sizes)[i]++;
       if (HASWEIGHTS(*graph)) {
         igraph_vector_t* w = &WEIGHTS_IN(*graph, i);
         IGRAPH_CHECK(igraph_vector_resize(w, N_NEIGHBORS(*graph, i)));
         VECTOR(*w)[igraph_vector_size(w) - 1] = 0;
       }
+    }
+  }
+
+  return IGRAPH_SUCCESS;
+}
+
+static igraph_error_t se2_weigh_diagonal(
+  se2_neighs* graph, igraph_bool_t is_skewed)
+{
+  igraph_integer_t const n_nodes = se2_vcount(graph);
+  igraph_vector_int_t diagonal_edges;
+
+  IGRAPH_CHECK(igraph_vector_int_init(&diagonal_edges, n_nodes));
+  IGRAPH_FINALLY(igraph_vector_int_destroy, &diagonal_edges);
+
+  if (ISSPARSE(*graph)) {
+    IGRAPH_CHECK(se2_collect_sparse_diagonal(graph, &diagonal_edges));
+  } else {
+    for (igraph_integer_t i = 0; i < n_nodes; i++) {
+      VECTOR(diagonal_edges)[i] = i;
     }
   }
 

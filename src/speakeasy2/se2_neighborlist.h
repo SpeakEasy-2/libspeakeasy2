@@ -22,12 +22,16 @@
 #include <speak_easy_2.h>
 
 /* Return the jth element of the ith list. */
-#define NEIGHBOR(a, i, j) (VECTOR(VECTOR(*(a).neigh_list)[(i)])[(j)])
+#define NEIGHBOR(a, i, j)                                                     \
+  ((a).neigh_list ? VECTOR(VECTOR(*(a).neigh_list)[(i)])[(j)] : j)
 #define NEIGHBORS(a, i) (VECTOR(*(a).neigh_list)[(i)])
+#define N_NEIGHBORS(a, i)                                                     \
+  ((a).neigh_list ? VECTOR(*(a).sizes)[(i)] : (a).n_nodes)
+#define ISSPARSE(a) ((a).neigh_list ? true : false)
+
 #define WEIGHT(a, i, j)                                                       \
   ((a).weights ? VECTOR(VECTOR(*(a).weights)[(i)])[(j)] : 1)
 #define WEIGHTS_IN(a, i) (VECTOR(*(a).weights)[(i)])
-#define N_NEIGHBORS(a, i) (VECTOR(*(a).sizes)[(i)])
 #define HASWEIGHTS(a) ((a).weights ? true : false)
 
 igraph_integer_t se2_vcount(se2_neighs const* graph);

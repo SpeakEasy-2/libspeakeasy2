@@ -36,6 +36,9 @@ jobs:
       - name: Test interrupt
         run: asan/examples/interrupt
 
+      - name: Test full graph
+        run: asan/examples/dense
+
   valgrind:
     name: Check with valgrind
     runs-on: ubuntu-latest
@@ -67,3 +70,6 @@ jobs:
 
       - name: interrupted
         run: make valgrind-interrupt
+
+      - name: full graph
+        run: make valgrind-dense

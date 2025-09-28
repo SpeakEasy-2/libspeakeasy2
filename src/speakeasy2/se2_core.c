@@ -555,9 +555,18 @@ static igraph_error_t se2_subgraph_from_community(se2_neighs const* origin,
     subgraph->weights = NULL;
   }
 
+  igraph_vector_int_t* neighs = NULL;
+  if (!ISSPARSE(*origin)) {
+    IGRAPH_CHECK(igraph_vector_int_init(neighs, se2_vcount(origin)));
+    IGRAPH_FINALLY(igraph_vector_int_destroy, neighs);
+
+    for (igraph_integer_t i = 0; i < se2_vcount(origin); i++) {
+      VECTOR(*neighs)[i] = i;
+    }
+  }
+
   for (igraph_integer_t i = 0; i < n_membs; i++) {
     igraph_integer_t node_id = VECTOR(*members)[i];
-    igraph_vector_int_t* neighs = &NEIGHBORS(*origin, node_id);
     igraph_vector_int_t* new_neighs = &NEIGHBORS(*subgraph, i);
     igraph_integer_t const n_neighs = N_NEIGHBORS(*origin, node_id);
     igraph_vector_t* w =
@@ -566,6 +575,10 @@ static igraph_error_t se2_subgraph_from_community(se2_neighs const* origin,
     IGRAPH_CHECK(igraph_vector_int_resize(new_neighs, n_neighs));
     if (HASWEIGHTS(*subgraph)) {
       IGRAPH_CHECK(igraph_vector_resize(w, n_neighs));
+    }
+
+    if (ISSPARSE(*origin)) {
+      neighs = &NEIGHBORS(*origin, node_id);
     }
 
     igraph_integer_t count = 0;
@@ -585,6 +598,11 @@ static igraph_error_t se2_subgraph_from_community(se2_neighs const* origin,
     if (HASWEIGHTS(*subgraph)) {
       IGRAPH_CHECK(igraph_vector_resize(w, count));
     }
+  }
+
+  if (!ISSPARSE(*origin)) {
+    igraph_vector_int_destroy(neighs);
+    IGRAPH_FINALLY_CLEAN(1);
   }
 
   for (igraph_integer_t i = 0; i < n_membs; i++) {

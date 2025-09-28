@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update to igraph 1.0.0
 - Remove `local_labels_heard` cache in partition to reduce memory usage when `n_labels` is close to `n_nodes` (also improves speed).
+- `neigh_list` data structure to handle full graphs without tracking fully determinate neighbors (in full case all nodes are neighbors with all other nodes). Significant memory reduction for large full graphs.
 
 ## [v0.1.11] 2025-09-04
 

@@ -37,22 +37,28 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
   igraph_vector_t const* weights, se2_neighs* neigh_list)
 {
   igraph_integer_t const n_nodes = igraph_vcount(graph);
-  igraph_bool_t directed = igraph_is_directed(graph);
+  igraph_bool_t const directed = igraph_is_directed(graph);
+  igraph_bool_t const is_sparse = igraph_ecount(graph) != (n_nodes * n_nodes);
 
   neigh_list->n_nodes = n_nodes;
   neigh_list->total_weight = 0;
 
-  neigh_list->neigh_list = igraph_malloc(sizeof(*neigh_list->neigh_list));
-  IGRAPH_CHECK_OOM(neigh_list->neigh_list, "");
-  IGRAPH_FINALLY(igraph_free, neigh_list->neigh_list);
-  IGRAPH_CHECK(igraph_vector_int_list_init(neigh_list->neigh_list, n_nodes));
-  IGRAPH_FINALLY(igraph_vector_int_list_destroy, neigh_list->neigh_list);
+  if (is_sparse) {
+    neigh_list->neigh_list = igraph_malloc(sizeof(*neigh_list->neigh_list));
+    IGRAPH_CHECK_OOM(neigh_list->neigh_list, "");
+    IGRAPH_FINALLY(igraph_free, neigh_list->neigh_list);
+    IGRAPH_CHECK(igraph_vector_int_list_init(neigh_list->neigh_list, n_nodes));
+    IGRAPH_FINALLY(igraph_vector_int_list_destroy, neigh_list->neigh_list);
 
-  neigh_list->sizes = igraph_malloc(sizeof(*neigh_list->sizes));
-  IGRAPH_CHECK_OOM(neigh_list->sizes, "");
-  IGRAPH_FINALLY(igraph_free, neigh_list->sizes);
-  IGRAPH_CHECK(igraph_vector_int_init(neigh_list->sizes, n_nodes));
-  IGRAPH_FINALLY(igraph_vector_int_destroy, neigh_list->sizes);
+    neigh_list->sizes = igraph_malloc(sizeof(*neigh_list->sizes));
+    IGRAPH_CHECK_OOM(neigh_list->sizes, "");
+    IGRAPH_FINALLY(igraph_free, neigh_list->sizes);
+    IGRAPH_CHECK(igraph_vector_int_init(neigh_list->sizes, n_nodes));
+    IGRAPH_FINALLY(igraph_vector_int_destroy, neigh_list->sizes);
+  } else {
+    neigh_list->neigh_list = NULL;
+    neigh_list->sizes = NULL;
+  }
 
   neigh_list->kin = igraph_malloc(sizeof(*neigh_list->kin));
   IGRAPH_CHECK_OOM(neigh_list->kin, "");
@@ -71,21 +77,26 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
     neigh_list->weights = NULL;
   }
 
-  for (igraph_integer_t eid = 0; eid < igraph_ecount(graph); eid++) {
-    VECTOR(*neigh_list->sizes)[IGRAPH_FROM(graph, eid)]++;
-    if (!directed) {
-      VECTOR(*neigh_list->sizes)[IGRAPH_TO(graph, eid)]++;
+  if (is_sparse) {
+    for (igraph_integer_t eid = 0; eid < igraph_ecount(graph); eid++) {
+      VECTOR(*neigh_list->sizes)[IGRAPH_FROM(graph, eid)]++;
+      if (!directed) {
+        VECTOR(*neigh_list->sizes)[IGRAPH_TO(graph, eid)]++;
+      }
+    }
+
+    for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
+      igraph_vector_int_t* neighbors =
+        &VECTOR(*neigh_list->neigh_list)[node_id];
+      IGRAPH_CHECK(igraph_vector_int_resize(
+        neighbors, N_NEIGHBORS(*neigh_list, node_id)));
     }
   }
 
-  for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
-    igraph_vector_int_t* neighbors = &VECTOR(*neigh_list->neigh_list)[node_id];
-    IGRAPH_CHECK(igraph_vector_int_resize(
-      neighbors, VECTOR(*neigh_list->sizes)[node_id]));
-    if (weights) {
+  if (weights) {
+    for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
       igraph_vector_t* w = &VECTOR(*neigh_list->weights)[node_id];
-      IGRAPH_CHECK(
-        igraph_vector_resize(w, VECTOR(*neigh_list->sizes)[node_id]));
+      IGRAPH_CHECK(igraph_vector_resize(w, N_NEIGHBORS(*neigh_list, node_id)));
     }
   }
 
@@ -96,10 +107,13 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
   for (igraph_integer_t eid = 0; eid < igraph_ecount(graph); eid++) {
     igraph_integer_t const from = IGRAPH_FROM(graph, eid);
     igraph_integer_t const to = IGRAPH_TO(graph, eid);
-    igraph_vector_int_t* neighbors = &VECTOR(*neigh_list->neigh_list)[from];
     igraph_integer_t neigh_pos = VECTOR(neigh_counts)[from];
 
-    VECTOR(*neighbors)[neigh_pos] = to;
+    if (is_sparse) {
+      igraph_vector_int_t* neighbors = &VECTOR(*neigh_list->neigh_list)[from];
+      VECTOR(*neighbors)[neigh_pos] = to;
+    }
+
     if (weights) {
       igraph_vector_t* w = &VECTOR(*neigh_list->weights)[from];
       VECTOR(*w)[neigh_pos] = VECTOR(*weights)[eid];
@@ -112,10 +126,13 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
       continue;
     }
 
-    neighbors = &VECTOR(*neigh_list->neigh_list)[to];
     neigh_pos = VECTOR(neigh_counts)[to];
 
-    VECTOR(*neighbors)[neigh_pos] = from;
+    if (is_sparse) {
+      igraph_vector_int_t* neighbors = &VECTOR(*neigh_list->neigh_list)[to];
+      VECTOR(*neighbors)[neigh_pos] = from;
+    }
+
     if (weights) {
       igraph_vector_t* w = &VECTOR(*neigh_list->weights)[to];
       VECTOR(*w)[neigh_pos] = VECTOR(*weights)[eid];
@@ -128,29 +145,35 @@ igraph_error_t se2_igraph_to_neighbor_list(igraph_t const* graph,
   igraph_vector_int_destroy(&neigh_counts);
   IGRAPH_FINALLY_CLEAN(1);
 
+  if (is_sparse) {
+    IGRAPH_FINALLY_CLEAN(4);
+  }
+
+  IGRAPH_FINALLY_CLEAN(2);
+
   if (weights) {
     IGRAPH_FINALLY_CLEAN(2);
   } else {
-    neigh_list->total_weight = igraph_vector_int_sum(neigh_list->sizes);
+    neigh_list->total_weight =
+      is_sparse ? igraph_vector_int_sum(neigh_list->sizes) : n_nodes * n_nodes;
   }
-
-  IGRAPH_FINALLY_CLEAN(6);
 
   return IGRAPH_SUCCESS;
 }
 
 void se2_neighs_destroy(se2_neighs* graph)
 {
-  igraph_vector_int_list_destroy(graph->neigh_list);
-  igraph_free(graph->neigh_list);
+  if (ISSPARSE(*graph)) {
+    igraph_vector_int_list_destroy(graph->neigh_list);
+    igraph_free(graph->neigh_list);
+    igraph_vector_int_destroy(graph->sizes);
+    igraph_free(graph->sizes);
+  }
 
   if (HASWEIGHTS(*graph)) {
     igraph_vector_list_destroy(graph->weights);
     igraph_free(graph->weights);
   }
-
-  igraph_vector_int_destroy(graph->sizes);
-  igraph_free(graph->sizes);
 
   igraph_vector_destroy(graph->kin);
   igraph_free(graph->kin);
@@ -162,7 +185,9 @@ igraph_integer_t se2_vcount(se2_neighs const* graph) { return graph->n_nodes; }
 /* Return the number of edges in the graph represented by \p graph. */
 igraph_integer_t se2_ecount(se2_neighs const* graph)
 {
-  return igraph_vector_int_sum(graph->sizes);
+  return ISSPARSE(*graph) ?
+           igraph_vector_int_sum(graph->sizes) :
+           graph->n_nodes * graph->n_nodes;
 }
 
 igraph_real_t se2_total_weight(se2_neighs const* graph)
