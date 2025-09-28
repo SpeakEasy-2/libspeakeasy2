@@ -52,7 +52,7 @@ int main(void)
   // Running SpeakEasy2
   se2_options opts = {
     .random_seed = 1234,
-    .subcluster = 1, // No sub-clustering.
+    .subcluster = 3,
     .verbose = true,
   };
 
