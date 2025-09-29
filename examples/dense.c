@@ -122,6 +122,7 @@ int main(void)
   igraph_vector_int_destroy(&membership_1);
 
   igraph_matrix_int_destroy(&ordering);
+  igraph_vector_int_destroy(&ground_truth);
   igraph_matrix_int_destroy(&membership);
   se2_neighs_destroy(&neigh_list);
   igraph_vector_destroy(&weights);
