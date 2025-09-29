@@ -50,7 +50,8 @@ target_compile_options(
   PRIVATE -Wall
   -pedantic
   -march=native
-  $<$<CONFIG:Release>:-O3>
+  $<$<CONFIG:Release>:-O3
+  -ffast-math>
   $<$<CONFIG:Sanitizer>:-fsanitize=address
   -fno-omit-frame-pointer
   -g

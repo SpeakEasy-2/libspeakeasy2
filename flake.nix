@@ -18,6 +18,8 @@
             gdb
             valgrind
             heaptrack
+            linuxPackages.perf
+            hotspot
           ]);
         };
     };

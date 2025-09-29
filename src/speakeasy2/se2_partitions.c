@@ -23,7 +23,6 @@
 #include "se2_error_handling.h"
 #include "se2_neighborlist.h"
 #include "se2_random.h"
-#include "unistd.h"
 
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 
@@ -55,11 +54,16 @@ static igraph_error_t se2_count_global_labels(se2_neighs const* graph,
   }
 
   igraph_vector_null(global_labels_heard);
+  igraph_real_t* global_labels = VECTOR(*global_labels_heard);
+  igraph_integer_t const* labels_i = VECTOR(*labels);
   for (igraph_integer_t node_id = 0; node_id < n_nodes; node_id++) {
+    igraph_integer_t* neighbors =
+      graph->neigh_list ? VECTOR(VECTOR(*graph->neigh_list)[node_id]) : NULL;
+    igraph_real_t* weights =
+      graph->weights ? VECTOR(VECTOR(*graph->weights)[node_id]) : NULL;
     for (igraph_integer_t j = 0; j < N_NEIGHBORS(*graph, node_id); j++) {
-      VECTOR(*global_labels_heard)
-      [VECTOR(*labels)[NEIGHBOR(*graph, node_id, j)]] +=
-        WEIGHT(*graph, node_id, j);
+      global_labels[labels_i[neighbors ? neighbors[j] : j]] +=
+        weights ? weights[j] : 1.0;
     }
   }
 

@@ -19,11 +19,13 @@
 #include "se2_label.h"
 
 #include "igraph_error.h"
+#include "igraph_memory.h"
 #include "igraph_vector.h"
 #include "se2_error_handling.h"
 #include "se2_neighborlist.h"
 
 #include <igraph.h>
+#include <string.h>
 
 /* Scores labels based on the difference between the local and global
  frequencies.  Labels that are overrepresented locally are likely to be of
@@ -32,37 +34,54 @@ igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
   se2_partition* partition, se2_iterator* node_iter, igraph_integer_t* n_moved)
 {
   igraph_integer_t const n_labels = partition->n_labels;
-  igraph_vector_t* const global_heard = partition->global_labels_heard;
-  igraph_vector_t* const kin = graph->kin;
+  igraph_real_t const* global_heard = VECTOR(*partition->global_labels_heard);
+  igraph_integer_t const* labels = LABEL(*partition);
+  igraph_real_t const* kin = VECTOR(*graph->kin);
   igraph_real_t const total_weight_inv = 1 / graph->total_weight;
 
-  igraph_vector_t local_heard;
-  SE2_THREAD_CHECK(igraph_vector_init(&local_heard, n_labels));
-  IGRAPH_FINALLY(igraph_vector_destroy, &local_heard);
+  igraph_real_t* scores =
+    (igraph_real_t*)igraph_malloc(n_labels * sizeof(*scores));
+  IGRAPH_FINALLY(igraph_free, scores);
 
   igraph_integer_t n_moved_i = 0;
   igraph_integer_t node_id = 0;
+  /* OPTIMIZATIONS: We are trying to calculate the label that is the most
+  common in each nodes neighborhood compared to the global frequency. Normally
+  to do this we would calculate the proportion of local labels (actual) and
+  subtract that from the proportion of global labels (expected) and look for
+  where actual is large compared to expected. This is equivalent to first
+  normalizing the global frequency by local degree / total graph weight to get
+  it on the same scale as the local neighborhood then directly comparing to the
+  raw local label counts (without having to convert to the frequency). We can
+  then start by setting the score to the negative of the normalized global
+  heard value (i.e. penalizing labels that are more common globally) for each
+  label then loop of the neighbors and add their weight to their label's score.
+  This gives us a vector of scores with the same order that we would get if
+  subtracting global frequency to neighborhood frequency directly but allows us
+  to reduce total calculations and perform the remaining calculations in
+  simpler for loops.
+*/
   while ((node_id = se2_iterator_next(node_iter)) != -1) {
-    igraph_real_t best_label_specificity = -INFINITY;
-    igraph_integer_t best_label = -1;
-    igraph_real_t norm_factor = VECTOR(*kin)[node_id] * total_weight_inv;
-
-    igraph_vector_null(&local_heard);
-    for (igraph_integer_t i = 0; i < N_NEIGHBORS(*graph, node_id); i++) {
-      VECTOR(local_heard)
-      [LABEL(*partition)[NEIGHBOR(*graph, node_id, i)]] +=
-        WEIGHT(*graph, node_id, i);
-    }
+    igraph_real_t const norm_factor = kin[node_id] * total_weight_inv;
+    igraph_integer_t const n_neighbors = N_NEIGHBORS(*graph, node_id);
+    igraph_integer_t const* neighbors =
+      graph->neigh_list ? VECTOR(VECTOR(*graph->neigh_list)[node_id]) : NULL;
+    igraph_real_t const* weights =
+      HASWEIGHTS(*graph) ? VECTOR(VECTOR(*graph->weights)[node_id]) : NULL;
 
     for (igraph_integer_t label_id = 0; label_id < n_labels; label_id++) {
-      igraph_real_t const actual = VECTOR(local_heard)[label_id];
-      igraph_real_t const expected = VECTOR(*global_heard)[label_id];
-      igraph_real_t const score = actual - (norm_factor * expected);
+      scores[label_id] = -global_heard[label_id] * norm_factor;
+    }
 
-      if (score > best_label_specificity) {
-        best_label_specificity = score;
-        best_label = label_id;
-      }
+    for (igraph_integer_t i = 0; i < n_neighbors; i++) {
+      scores[labels[neighbors ? neighbors[i] : i]] +=
+        weights ? weights[i] : 1.0;
+    }
+
+    igraph_integer_t best_label = 0;
+    for (igraph_integer_t label_id = 1; label_id < n_labels; label_id++) {
+      best_label =
+        scores[label_id] > scores[best_label] ? label_id : best_label;
     }
 
     if (LABEL(*partition)[node_id] != best_label) {
@@ -78,7 +97,7 @@ igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
     *n_moved = n_moved_i;
   }
 
-  igraph_vector_destroy(&local_heard);
+  igraph_free(scores);
   IGRAPH_FINALLY_CLEAN(1);
 
   return IGRAPH_SUCCESS;
@@ -124,8 +143,8 @@ igraph_error_t se2_relabel_worst_nodes(se2_neighs const* graph,
   SE2_THREAD_CHECK(se2_iterator_k_worst_fit_nodes_init(&node_iter, graph,
     partition, fraction_nodes_to_label * n_nodes, fraction_nodes_to_label,
     &best_fit_nodes));
-  IGRAPH_FINALLY(se2_iterator_destroy, &node_iter);
   IGRAPH_FINALLY(igraph_vector_int_destroy, &best_fit_nodes);
+  IGRAPH_FINALLY(se2_iterator_destroy, &node_iter);
 
   SE2_THREAD_CHECK(igraph_vector_int_init(
     &best_fit_labels, igraph_vector_int_size(&best_fit_nodes)));
