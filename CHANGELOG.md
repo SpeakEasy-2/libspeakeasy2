@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Improved performance by optimizing calculations of most specific labels and global labels heard, and by removing extra calls to committing the partition (which has to then recalculate global labels heard).
 
+### Fixed
+
+- Wrap additional error returning functions in check macros to prevent memory errors during error handling.
+
 ## [v0.1.12] 2025-09-28
 
 ### Changed

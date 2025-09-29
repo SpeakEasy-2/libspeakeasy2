@@ -21,16 +21,16 @@
 #include "se2_error_handling.h"
 
 /* Initializes default igraph random number generator to use twister method */
-igraph_rng_t* se2_rng_init(igraph_rng_t* rng, int const seed)
+igraph_error_t se2_rng_init(
+  igraph_rng_t* rng, igraph_rng_t* old_rng, int const seed)
 {
-  igraph_rng_t* old_rng = igraph_rng_default();
+  old_rng = igraph_rng_default();
 
-  SE2_THREAD_CHECK_RETURN(
-    igraph_rng_init(rng, &igraph_rngtype_mt19937), old_rng);
+  SE2_THREAD_CHECK(igraph_rng_init(rng, &igraph_rngtype_mt19937));
   igraph_rng_set_default(rng);
   igraph_rng_seed(igraph_rng_default(), seed);
 
-  return old_rng;
+  return IGRAPH_SUCCESS;
 }
 
 /* Shuffle the first m elements of the n element vector arr */

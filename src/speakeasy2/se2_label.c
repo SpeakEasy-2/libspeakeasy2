@@ -157,7 +157,7 @@ igraph_error_t se2_relabel_worst_nodes(se2_neighs const* graph,
     se2_partition_add_to_stage(
       partition, VECTOR(best_fit_nodes)[i], tmp_label);
   }
-  se2_partition_commit_changes(partition, graph);
+  SE2_THREAD_CHECK(se2_partition_commit_changes(partition, graph));
 
   SE2_THREAD_CHECK(
     se2_find_most_specific_labels_i(graph, partition, &node_iter, NULL));
@@ -168,7 +168,7 @@ igraph_error_t se2_relabel_worst_nodes(se2_neighs const* graph,
       partition, VECTOR(best_fit_nodes)[i], VECTOR(best_fit_labels)[i]);
   }
   partition->repack = true;
-  se2_partition_commit_changes(partition, graph);
+  SE2_THREAD_CHECK(se2_partition_commit_changes(partition, graph));
 
   igraph_vector_int_destroy(&best_fit_labels);
   igraph_vector_int_destroy(&best_fit_nodes);

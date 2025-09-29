@@ -250,13 +250,14 @@ static void* se2_thread_bootstrap(void* parameters)
   for (igraph_integer_t run_i = p->tid; run_i < independent_runs;
        run_i += n_threads) {
     *p->run_i = run_i;
-    igraph_rng_t rng, *old_rng;
+    igraph_rng_t rng, old_rng;
     igraph_integer_t partition_offset = run_i * p->opts->target_partitions;
     igraph_vector_int_t ic_store;
 
-    old_rng = se2_rng_init(&rng, run_i + p->opts->random_seed);
-    IGRAPH_FINALLY(igraph_rng_set_default, old_rng);
+    SE2_THREAD_CHECK_RETURN(
+      se2_rng_init(&rng, &old_rng, run_i + p->opts->random_seed), NULL);
     IGRAPH_FINALLY(igraph_rng_destroy, &rng);
+    IGRAPH_FINALLY(igraph_rng_set_default, &old_rng);
 
     SE2_THREAD_CHECK_RETURN(
       igraph_vector_int_init(&ic_store, p->n_nodes), NULL);
@@ -285,7 +286,7 @@ static void* se2_thread_bootstrap(void* parameters)
     SE2_THREAD_CHECK_RETURN(
       se2_core(p->graph, p->partition_store, partition_offset, p->opts), NULL);
 
-    igraph_rng_set_default(old_rng);
+    igraph_rng_set_default(&old_rng);
     igraph_rng_destroy(&rng);
     IGRAPH_FINALLY_CLEAN(2);
 

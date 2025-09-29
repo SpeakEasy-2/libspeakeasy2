@@ -21,7 +21,8 @@
 
 #include <igraph.h>
 
-igraph_rng_t* se2_rng_init(igraph_rng_t* rng, int const seed);
+igraph_error_t se2_rng_init(
+  igraph_rng_t* rng, igraph_rng_t* old_rng, int const seed);
 void se2_randperm(igraph_vector_int_t* arr, igraph_integer_t const n,
   igraph_integer_t const m);
 

@@ -180,7 +180,7 @@ igraph_error_t se2_iterator_random_node_init(se2_iterator* iterator,
     n_iter = n_total * proportion;
   }
 
-  se2_iterator_from_vector(iterator, nodes, n_iter);
+  SE2_THREAD_CHECK(se2_iterator_from_vector(iterator, nodes, n_iter));
   IGRAPH_FINALLY(se2_iterator_destroy, iterator);
   iterator->owns_ids = true;
   se2_iterator_shuffle(iterator);
@@ -212,7 +212,7 @@ igraph_error_t se2_iterator_random_label_init(se2_iterator* iterator,
     n_iter = n_total * proportion;
   }
 
-  se2_iterator_from_vector(iterator, labels, n_iter);
+  SE2_THREAD_CHECK(se2_iterator_from_vector(iterator, labels, n_iter));
   IGRAPH_FINALLY(se2_iterator_destroy, iterator);
   iterator->owns_ids = true;
   se2_iterator_shuffle(iterator);

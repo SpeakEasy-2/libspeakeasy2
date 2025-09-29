@@ -26,6 +26,9 @@ init-%:
 valgrind-%: debug
 	valgrind --track-origins=yes --leak-check=full debug/examples/$*
 
+asan-%: asan
+	asan/examples/$*
+
 .PHONY: clean
 clean:
 	rm -f vgcore.*
