@@ -91,8 +91,6 @@ igraph_error_t se2_find_most_specific_labels_i(se2_neighs const* graph,
     se2_partition_add_to_stage(partition, node_id, best_label);
   }
 
-  SE2_THREAD_CHECK(se2_partition_commit_changes(partition, graph));
-
   if (n_moved) {
     *n_moved = n_moved_i;
   }
@@ -121,6 +119,10 @@ igraph_error_t se2_find_most_specific_labels(se2_neighs const* graph,
   IGRAPH_FINALLY_CLEAN(1);
 
   *did_change = (n_moved > 0);
+
+  if (*did_change) {
+    SE2_THREAD_CHECK(se2_partition_commit_changes(partition, graph));
+  }
 
   return IGRAPH_SUCCESS;
 }
