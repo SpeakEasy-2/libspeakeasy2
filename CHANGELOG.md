@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Wrap additional error returning functions in check macros to prevent memory errors during error handling.
+- Prevent duplicate error statements when error / interruption occurs in a worker thread.
 
 ## [v0.1.12] 2025-09-28
 

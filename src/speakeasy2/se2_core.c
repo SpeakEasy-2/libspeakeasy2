@@ -366,8 +366,10 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
 #ifdef SE2PAR
   pthread_t threads[opts->max_threads];
   pthread_mutex_t status_mutex[opts->max_threads];
-  struct se2_pthread_mutex_array status_mutex_holder = { .array = status_mutex,
-    .n = opts->max_threads };
+  struct se2_pthread_mutex_array status_mutex_holder = {
+    .array = status_mutex,
+    .n = opts->max_threads,
+  };
   for (igraph_integer_t i = 0; i < opts->max_threads; i++) {
     pthread_mutex_init(status_mutex + i, NULL);
   }
@@ -432,7 +434,8 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
 #endif
 
   if (se2_thread_errorcode != IGRAPH_SUCCESS) {
-    IGRAPH_ERROR("", se2_thread_errorcode);
+    IGRAPH_FINALLY_FREE();
+    return se2_thread_errorcode;
   };
 
 #ifdef SE2PAR
