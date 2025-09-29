@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Improved performance by optimizing calculations of most specific labels and global labels heard, and by removing extra calls to committing the partition (which has to then recalculate global labels heard).
+
 ## [v0.1.12] 2025-09-28
 
 ### Changed
