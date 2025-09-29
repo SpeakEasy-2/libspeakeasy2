@@ -21,12 +21,15 @@ int main(void)
   igraph_set_error_handler(igraph_error_handler_printignore);
   igraph_set_status_handler(igraph_status_handler_stderr);
 
-  igraph_t graph;
-  igraph_integer_t n_nodes = 200, n_types = 4;
-  se2_neighs neigh_list;
+  igraph_integer_t const n_nodes = 500;
   igraph_real_t const mu = 0.25; // probability of between community edges.
+
+  igraph_t graph;
+  se2_neighs neigh_list;
   igraph_vector_t type_dist;
   igraph_real_t type_dist_arr[] = { 0.4, 0.25, 0.2, 0.15 };
+  igraph_integer_t const n_types =
+    sizeof(type_dist_arr) / sizeof(*type_dist_arr);
   igraph_matrix_t pref_mat;
   igraph_matrix_int_t membership;
   igraph_error_t rs;
@@ -56,6 +59,8 @@ int main(void)
   se2_options opts = {
     .random_seed = 1234,
     .subcluster = 1, // No sub-clustering.
+    .independent_runs = 10,
+    .max_threads = 5,
     .verbose = true,
   };
 
