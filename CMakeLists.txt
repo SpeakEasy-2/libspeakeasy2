@@ -70,7 +70,6 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Profile")
   add_link_options(-pg)
 endif()
 
-get_directory_property(definitions COMPILE_DEFINITIONS)
-if(NOT "${definitions}" MATCHES "USING_R")
+if(PROJECT_IS_TOP_LEVEL)
   add_subdirectory(examples/)
 endif()
