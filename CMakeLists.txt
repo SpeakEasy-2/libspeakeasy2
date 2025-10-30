@@ -49,7 +49,6 @@ target_compile_options(
   SpeakEasy2
   PRIVATE -Wall
   -pedantic
-  -march=native
   $<$<CONFIG:Release>:-O3
   -ffast-math>
   $<$<CONFIG:Sanitizer>:-fsanitize=address
