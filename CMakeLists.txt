@@ -10,6 +10,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(SE2_PARALLEL "Process independent runs in parallel" ON)
 
+if(MSVC)
+  set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+endif()
+
 find_package(Threads)
 if(SE2_PARALLEL AND NOT Threads_FOUND)
   set(SE2_PARALLEL OFF)

@@ -16,10 +16,7 @@
  * with SpeakEasy 2. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "igraph_random.h"
-
 #include <speak_easy_2.h>
-#include <unistd.h>
 
 #ifdef SE2PAR
 # include <pthread.h>

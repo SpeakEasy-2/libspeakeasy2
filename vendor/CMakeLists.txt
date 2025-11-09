@@ -168,7 +168,7 @@ else()
 endif()
 
 if(WIN32)
-  target_compile_definitions(igraph PRIVATE MSDOS)
+  target_compile_definitions(igraph PUBLIC MSDOS)
 endif()
 
 target_link_libraries(igraph PRIVATE m)
@@ -189,3 +189,9 @@ target_include_directories(
   PRIVATE ${PROJECT_BINARY_DIR}/vendor/igraph/src
           ${CMAKE_CURRENT_SOURCE_DIR}/igraph/src
           ${CMAKE_CURRENT_SOURCE_DIR}/igraph/vendor)
+
+if(MSVC)
+  # Add MSVC-specific include path for some headers that are missing on Windows
+  target_include_directories(
+    igraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/igraph/msvc/include)
+endif()
