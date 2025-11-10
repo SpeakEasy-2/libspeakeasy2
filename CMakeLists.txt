@@ -10,14 +10,24 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(SE2_PARALLEL "Process independent runs in parallel" ON)
 
-if(MSVC)
-  set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+if(SE2_PARALLEL AND MSCV)
+  find_packages(PThreads4W)
+  set(PThreads_FOUND PThreads4W_FOUND)
+  if(Pthreads_FOUND)
+    set(PThreads_LIBRARY "${PThreads4W_LIBRARY}")
+  endif()
+elseif(SE2_PARALLEL)
+  find_package(Threads)
+  set(PThreads_FOUND "${CMAKE_USE_PTHREADS_INIT}")
+  if(PThreads_FOUND)
+    set(PThreads_LIBRARY Threads::Threads)
+  endif()
 endif()
 
-find_package(Threads)
-if(SE2_PARALLEL AND NOT Threads_FOUND)
+if(NOT PThreads_FOUND)
   set(SE2_PARALLEL OFF)
-  message(WARNING "Threads not found. Compiling without parallel support")
+  message(
+    WARNING "No pthreads library found. Compiling without parallel support")
 endif()
 
 add_subdirectory(vendor)
@@ -41,7 +51,7 @@ if("${CMAKE_PACKAGE_VERSION}" STREQUAL "")
 endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/se2_version.h.in
-  ${CMAKE_CURRENT_BINARY_DIR}/include/se2_version.h)
+               ${CMAKE_CURRENT_BINARY_DIR}/include/se2_version.h)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE "Release")
@@ -52,16 +62,16 @@ add_subdirectory(src/speakeasy2)
 target_compile_options(
   SpeakEasy2
   PRIVATE -Wall
-  -pedantic
-  $<$<CONFIG:Release>:-O3
-  -ffast-math>
-  $<$<CONFIG:Sanitizer>:-fsanitize=address
-  -fno-omit-frame-pointer
-  -g
-  -O0>
-  $<$<CONFIG:Profile>:-pg>)
+          -pedantic
+          $<$<CONFIG:Release>:-O3
+          -ffast-math>
+          $<$<CONFIG:Sanitizer>:-fsanitize=address
+          -fno-omit-frame-pointer
+          -g
+          -O0>
+          $<$<CONFIG:Profile>:-pg>)
 target_link_options(SpeakEasy2 PRIVATE $<$<CONFIG:Sanitizer>:-fsanitize=address
-  -fno-omit-frame-pointer> $<$<CONFIG:Profile>:-pg>)
+                    -fno-omit-frame-pointer> $<$<CONFIG:Profile>:-pg>)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Sanitizer")
   add_compile_options(-fsanitize=address -fno-omit-frame-pointer -g -O0)

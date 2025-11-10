@@ -4,7 +4,7 @@ add_library(SpeakEasy2 ${src_files})
 target_link_libraries(SpeakEasy2 PUBLIC igraph)
 
 if(SE2_PARALLEL)
-  target_link_libraries(SpeakEasy2 PUBLIC Threads::Threads)
+  target_link_libraries(SpeakEasy2 PUBLIC "${PThreads_LIBRARY}")
 endif()
 
 target_include_directories(SpeakEasy2 PUBLIC ${PROJECT_SOURCE_DIR}/include
