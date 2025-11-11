@@ -31,7 +31,10 @@
 
 igraph_bool_t greeting_printed = false;
 igraph_error_t se2_thread_errorcode = IGRAPH_SUCCESS;
+
+#ifdef SE2PAR
 pthread_mutex_t se2_error_mutex;
+#endif
 
 #define SE2_SET_OPTION(opts, field, default)                                  \
   (opts->field) = (opts)->field ? (opts)->field : (default)
@@ -56,7 +59,7 @@ static igraph_error_t se2_core(se2_neighs const* graph,
       se2_mode_run_step(graph, &working_partition, &tracker, time));
 #ifndef SE2PAR
     if ((time % 32) == 0) {
-      SE2_THREAD_CHECK(igraph_allow_interruption(NULL));
+      SE2_THREAD_CHECK(igraph_allow_interruption());
     }
 #endif
 
@@ -312,6 +315,7 @@ static void* se2_thread_bootstrap(void* parameters)
   return NULL;
 }
 
+#ifdef SE2PAR
 // Structure to allow destroying all mutexes with a single destroyer to reduce
 // load on the igraph finally stack.
 struct se2_pthread_mutex_array {
@@ -319,7 +323,6 @@ struct se2_pthread_mutex_array {
   igraph_integer_t n;
 };
 
-#ifdef SE2PAR
 void se2_pthread_mutex_array_destroy(
   struct se2_pthread_mutex_array* mutex_array)
 {
@@ -684,8 +687,8 @@ igraph_error_t speak_easy_2(
       "SpeakEasy 2 was not compiled with thread support. "
       "Ignoring `max_threads`.\n\n"
       "To suppress this warning do not set `max_threads`\n.");
-    opts->max_threads = 1;
   }
+  opts->max_threads = 1;
 #endif
 
   IGRAPH_CHECK(se2_reweigh(graph, opts->verbose));

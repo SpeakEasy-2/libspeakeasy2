@@ -24,7 +24,7 @@ elseif(SE2_PARALLEL)
   endif()
 endif()
 
-if(NOT PThreads_FOUND)
+if(SE2_PARALLEL AND NOT PThreads_FOUND)
   set(SE2_PARALLEL OFF)
   message(
     WARNING "No pthreads library found. Compiling without parallel support")
