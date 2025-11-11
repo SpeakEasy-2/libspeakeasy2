@@ -32,8 +32,36 @@ jobs:
       - name: Run example
         run: build/examples/block
 
-  build-windows:
-    name: Compile on Windows
+  build-linux-no-parallel:
+    name: Compile on Linux without multithreading
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt upgrade
+          sudo apt install cmake ninja-build clang
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Clone igraph
+        run: |
+          git submodule init
+          git submodule update --recursive
+
+      - name: Build
+        run: |
+          CC=clang cmake -B build . -G Ninja -D CMAKE_BUILD_TYPE=Debug -D SE2_PARALLEL=0
+          cmake --build build
+
+      - name: Run example
+        run: build/examples/block
+
+  build-windows-msys2:
+    name: Compile on Windows using msys2
     runs-on: windows-latest
 
     defaults:
@@ -41,11 +69,6 @@ jobs:
         shell: msys2 {0}
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          fetch-depth: 0
-
       - name: Install depenedencies
         uses: msys2/setup-msys2@v2
         with:
@@ -59,6 +82,11 @@ jobs:
           update: true
           location: D:\
 
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
       - name: Clone igraph
         run: |
           git submodule init
@@ -67,6 +95,96 @@ jobs:
       - name: Build from source
         run: |
           cmake -B build . -G Ninja
+          cmake --build build
+
+      - name: Run example
+        run: build/examples/block
+
+  build-windows-vcpkg:
+    name: Compile on Windows with vcpkg
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: pwsh {0}
+
+    steps:
+      - name: Cache vcpkg
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: C:/vcpkg/installed/
+          key: vcpkg-${{ runner.os }}
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: |
+          vcpkg integrate install
+          vcpkg install libxml2:x64-windows-static-md pthreads:x64-windows-static-md
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Clone igraph
+        run: |
+          git submodule init
+          git submodule update --recursive
+
+      - name: Build from source
+        env:
+          IGRAPH_EXTRA_LIBRARY_PATH: "C:/vcpkg/installed/x64-windows-static-md/lib/"
+          IGRAPH_EXTRA_LIBRARIES: "libxml2,lzma,zlib,iconv,charset,bcrypt"
+          IGRAPH_EXTRA_DYNAMIC_LIBRARIES: "wsock32,ws2_32"
+          IGRAPH_STATIC_EXTENSION: 1
+        run: |
+          cmake -B build . -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64
+          cmake --build build
+
+      - name: Run example
+        run: build/examples/block
+
+  build-windows-vcpkg-no-parallel:
+    name: Compile on Windows with vcpkg and without multithreading.
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: pwsh {0}
+
+    steps:
+      - name: Cache vcpkg
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: C:/vcpkg/installed/
+          key: vcpkg-${{ runner.os }}
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: |
+          vcpkg integrate install
+          vcpkg install libxml2:x64-windows-static-md
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Clone igraph
+        run: |
+          git submodule init
+          git submodule update --recursive
+
+      - name: Build from source
+        env:
+          IGRAPH_EXTRA_LIBRARY_PATH: "C:/vcpkg/installed/x64-windows-static-md/lib/"
+          IGRAPH_EXTRA_LIBRARIES: "libxml2,lzma,zlib,iconv,charset,bcrypt"
+          IGRAPH_EXTRA_DYNAMIC_LIBRARIES: "wsock32,ws2_32"
+          IGRAPH_STATIC_EXTENSION: 1
+        run: |
+          cmake -B build . -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64
           cmake --build build
 
       - name: Run example
