@@ -140,10 +140,10 @@ jobs:
           IGRAPH_STATIC_EXTENSION: 1
         run: |
           cmake -B build . -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64
-          cmake --build build
+          cmake --build build --config Release
 
       - name: Run example
-        run: build/examples/block
+        run: build\examples\Release\block.exe
 
   build-windows-vcpkg-no-parallel:
     name: Compile on Windows with vcpkg and without multithreading.
@@ -185,10 +185,16 @@ jobs:
           IGRAPH_STATIC_EXTENSION: 1
         run: |
           cmake -B build . -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64
-          cmake --build build
+          cmake --build build --config Release
+
+      - name: Look around build/examples/Release
+        shell: bash
+        run: |
+          ls build/examples/Release
 
       - name: Run example
-        run: build/examples/block
+        shell: bash
+        run: build/examples/Release/block
 
   build-macos:
     name: Compile on macOS
