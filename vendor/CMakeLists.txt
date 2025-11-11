@@ -171,7 +171,9 @@ if(WIN32)
   target_compile_definitions(igraph PUBLIC MSDOS)
 endif()
 
-target_link_libraries(igraph PRIVATE m)
+if(NOT MSVC)
+  target_link_libraries(igraph PRIVATE m)
+endif()
 
 include(GenerateExportHeader)
 generate_export_header(igraph STATIC_DEFINE IGRAPH_STATIC EXPORT_FILE_NAME

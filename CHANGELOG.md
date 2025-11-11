@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Only build examples if this is top level. Prevents CMake from compiling the examples when libSE2 is being used by higher level languages.
+- Remove use of VLAs so MSVC can compile the library.
 
 ### Fixed
 

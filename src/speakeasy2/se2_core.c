@@ -124,11 +124,17 @@ static igraph_error_t se2_most_representative_partition(
   IGRAPH_CHECK(igraph_vector_init(&nmi_sums, n_partitions));
   IGRAPH_FINALLY(igraph_vector_destroy, &nmi_sums);
 
-  struct represent_parameters args[opts->max_threads];
+  struct represent_parameters* args =
+    malloc(sizeof(*args) * opts->max_threads);
+  IGRAPH_FINALLY(free, args);
+  IGRAPH_CHECK_OOM(args, "Out of memory.");
 
 #ifdef SE2PAR
-  pthread_t threads[opts->max_threads];
+  pthread_t* threads = malloc(sizeof(*threads) * opts->max_threads);
+  IGRAPH_FINALLY(free, threads);
+  IGRAPH_CHECK_OOM(threads, "Out of memory.");
   pthread_mutex_init(&se2_error_mutex, NULL);
+  IGRAPH_FINALLY(pthread_mutex_destroy, &se2_error_mutex);
 #endif
   for (igraph_integer_t tid = 0; tid < opts->max_threads; tid++) {
     args[tid].tid = tid;
@@ -149,7 +155,13 @@ static igraph_error_t se2_most_representative_partition(
     pthread_join(threads[tid], NULL);
   }
   pthread_mutex_destroy(&se2_error_mutex);
+
+  free(threads);
+  IGRAPH_FINALLY_CLEAN(2);
 #endif
+
+  free(args);
+  IGRAPH_FINALLY_CLEAN(1);
 
   igraph_matrix_rowsum(&nmi_sum_accumulator, &nmi_sums);
 
@@ -364,8 +376,14 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
   IGRAPH_FINALLY(igraph_vector_int_destroy, &unique_labels);
 
 #ifdef SE2PAR
-  pthread_t threads[opts->max_threads];
-  pthread_mutex_t status_mutex[opts->max_threads];
+  pthread_t* threads = malloc(sizeof(*threads) * opts->max_threads);
+  IGRAPH_FINALLY(free, threads);
+  IGRAPH_CHECK_OOM(threads, "Out of memory.");
+  pthread_mutex_t* status_mutex =
+    malloc(sizeof(*status_mutex) * opts->max_threads);
+  IGRAPH_FINALLY(free, status_mutex);
+  IGRAPH_CHECK_OOM(status_mutex, "Out of memory.");
+
   struct se2_pthread_mutex_array status_mutex_holder = {
     .array = status_mutex,
     .n = opts->max_threads,
@@ -379,7 +397,9 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
   IGRAPH_FINALLY(pthread_mutex_destroy, &se2_error_mutex);
 #endif
 
-  struct bootstrap_params args[opts->max_threads];
+  struct bootstrap_params* args = malloc(sizeof(*args) * opts->max_threads);
+  IGRAPH_FINALLY(free, args);
+  IGRAPH_CHECK_OOM(args, "Out of memory.");
 
   for (igraph_integer_t tid = 0; tid < opts->max_threads; tid++) {
     args[tid].tid = tid;
@@ -438,10 +458,15 @@ static igraph_error_t se2_bootstrap(se2_neighs const* graph,
     return se2_thread_errorcode;
   };
 
+  free(args);
+  IGRAPH_FINALLY_CLEAN(1);
+
 #ifdef SE2PAR
   se2_pthread_mutex_array_destroy(&status_mutex_holder);
   pthread_mutex_destroy(&se2_error_mutex);
-  IGRAPH_FINALLY_CLEAN(2);
+  free(status_mutex);
+  free(threads);
+  IGRAPH_FINALLY_CLEAN(4);
 #endif
 
   igraph_vector_int_destroy(&thread_run);

@@ -19,8 +19,6 @@
 #ifndef SE2_PARTITIONS_H
 #define SE2_PARTITIONS_H
 
-#include "igraph_types.h"
-
 #include <speak_easy_2.h>
 
 // LABEL(partition)[node_id] gets the reference label for the node.

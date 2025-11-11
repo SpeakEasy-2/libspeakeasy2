@@ -26,8 +26,8 @@ typedef struct {
   // before recording.
   igraph_integer_t random_seed; // Seed for reproducing results.
   igraph_integer_t max_threads; // Number of threads to use.
-  bool node_confidence;
-  bool verbose; // Print information to stdout
+  igraph_bool_t node_confidence;
+  igraph_bool_t verbose; // Print information to stdout
 } se2_options;
 
 typedef struct {
