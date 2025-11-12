@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Add compatibility files for MSCV when installing igraph.
+- Add compatibility files for MSVC when installing igraph.
 - Thread library check now explicitly checks for pthreads and not any thread library.
 - Wrap all pthread functions in #ifdef SE2PAR guards.
 

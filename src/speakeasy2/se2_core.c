@@ -22,6 +22,11 @@
 # include <pthread.h>
 #endif
 
+#if defined(SE2PAR) && defined(_MSC_VER)
+# include <threads.h>
+# define nanosleep thrd_sleep
+#endif
+
 #include "se2_error_handling.h"
 #include "se2_modes.h"
 #include "se2_neighborlist.h"

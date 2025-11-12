@@ -5,6 +5,7 @@ project(
   DESCRIPTION "igraph implementation of SpeakEasy2 community detection."
   LANGUAGES C)
 
+set(CMAKE_C_STANDARD 11) # Needed for threads.h->thrd_sleep on MSVC.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
