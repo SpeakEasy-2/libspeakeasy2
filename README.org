@@ -46,6 +46,23 @@ To build a shared library, define ~-D BUILD_SHARED_LIBS=ON~ in the configure ste
 
 If ~pthreads~ is found, the library will be compiled to run in parallel. To turn off parallel processing use the ~-D SE2_PARALLEL=OFF~ in the configure step. At run time using ~max_threads = 1~ will also turn off parallel processing.
 
+** MSVC
+To build with MSVC, you need to install the ~libxml2~ library from vcpkg and, for multithreading support, the ~pthreads~ package.
+
+#+begin_src bash :eval no
+vcpkg install libxml2:x64-windows-static-md pthreads:x64-windows-static-md
+#+end_src
+
+If using a 32 bit Windows, you will need to change the architecture to ~x86~ instead of ~x64~ for both the vcpkgs.
+Then provide ~CMake~ with the triplet and toolchain:
+
+#+begin_src bash :eval no
+  cmake -B build . -DVCPKG_TARGET_TRIPLET=x64-windows-static-md -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64
+  cmake --build build --config Release
+#+end_src
+
+Again, changing the architecture as needed for a 32 bit system with the ~CMake~ architecture (after the ~-A~ flag) being set to ~Win32~.
+
 * Examples
 For a simple example, we can run SE2 on the Zachary Karate Club graph.
 
